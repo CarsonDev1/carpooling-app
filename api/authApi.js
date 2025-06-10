@@ -24,31 +24,33 @@ export const registerUser = async (userData) => {
 // Verify OTP - New function for OTP verification
 export const verifyOtp = async (otpData) => {
 	try {
-		const response = await api.post('/auth/verify-otp', otpData);
-
-		if (response.data.status === 'success') {
-			// Save token and user info after successful OTP verification
-			await AsyncStorage.setItem('token', response.data.data.token);
-			await AsyncStorage.setItem('user', JSON.stringify(response.data.data.user));
+	  const response = await api.post('/auth/verify-otp', otpData);
+	  
+	  if (response.data.status === 'success') {
+		// Chỉ lưu token nếu có trong response (sau khi hoàn tất đăng ký)
+		if (response.data.data.token) {
+		  await AsyncStorage.setItem('token', response.data.data.token);
+		  await AsyncStorage.setItem('user', JSON.stringify(response.data.data.user));
 		}
-
-		return response.data;
+	  }
+	  
+	  return response.data;
 	} catch (error) {
-		console.error('OTP verification error:', error);
-		throw error.response?.data || { message: 'Xác thực OTP thất bại' };
+	  console.error('OTP verification error:', error);
+	  throw error.response?.data || { message: 'Xác thực OTP thất bại' };
 	}
-};
+  };
 
 // Resend OTP - New function to resend OTP
 export const resendOtp = async (userId) => {
 	try {
-		const response = await api.post('/auth/resend-otp', { userId });
-		return response.data;
+	  const response = await api.post('/auth/resend-otp', { userId });
+	  return response.data;
 	} catch (error) {
-		console.error('Resend OTP error:', error);
-		throw error.response?.data || { message: 'Gửi lại OTP thất bại' };
+	  console.error('Resend OTP error:', error);
+	  throw error.response?.data || { message: 'Gửi lại OTP thất bại' };
 	}
-};
+  };
 
 // Đăng nhập
 export const loginUser = async (credentials) => {
@@ -192,5 +194,22 @@ export const checkAuthStatus = async () => {
 	} catch (error) {
 		console.error('Check auth status error:', error);
 		return { isAuthenticated: false, user: null, token: null };
+	}
+};
+// Set Password - Đặt mật khẩu và hoàn tất đăng ký
+export const setPassword = async (passwordData) => {
+	try {
+		const response = await api.post('/auth/set-password', passwordData);
+
+		if (response.data.status === 'success') {
+			// Lưu token và thông tin user sau khi hoàn tất đăng ký
+			await AsyncStorage.setItem('token', response.data.data.token);
+			await AsyncStorage.setItem('user', JSON.stringify(response.data.data.user));
+		}
+
+		return response.data;
+	} catch (error) {
+		console.error('Set password error:', error);
+		throw error.response?.data || { message: 'Đặt mật khẩu thất bại' };
 	}
 };
