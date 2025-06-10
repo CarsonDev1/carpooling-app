@@ -9,13 +9,14 @@ import { useAuth } from "../context/AuthContext";
 // Import screens
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
-import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
+import ForgotPasswordScreen from "../screens/auth/ForgotPassWordScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import LoadingScreen from "../screens/LoadingScreen";
 import HomeScreen from "../screens/HomeScreen";
 import OTPScreen from "../screens/auth/OTPScreen";
 import SetPasswordScreen from "../screens/auth/SetPasswordScreen";
 import RegisterSuccessScreen from "../screens/auth/RegisterSuccessScreen";
+import OTPPassWordScreen from "../screens/auth/OTPPassWordScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -39,7 +40,7 @@ const AuthStack = () => {
       />
       <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
       <Stack.Screen name="RegisterSuccess" component={RegisterSuccessScreen} />
-      
+      <Stack.Screen name="OTPPassWord" component={OTPPassWordScreen} />
     </Stack.Navigator>
   );
 };

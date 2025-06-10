@@ -18,7 +18,7 @@ const SetPasswordScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const navigation = useNavigation();
   const route = useRoute();
 
@@ -34,20 +34,20 @@ const SetPasswordScreen = () => {
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
 
     const errors = [];
-    
+
     if (pwd.length < minLength) {
       errors.push(`Mật khẩu phải có ít nhất ${minLength} ký tự`);
     }
-    
+
     if (!hasNumbers) {
       errors.push("Mật khẩu phải chứa ít nhất 1 số");
     }
-    
+
     // Optional: Add more strict requirements
     // if (!hasUpperCase) {
     //   errors.push("Mật khẩu phải chứa ít nhất 1 chữ hoa");
     // }
-    
+
     return errors;
   };
 
@@ -93,51 +93,34 @@ const SetPasswordScreen = () => {
       const passwordData = {
         userId: userId,
         password: password.trim(),
-        confirmPassword: confirmPassword.trim()
+        confirmPassword: confirmPassword.trim(),
       };
 
       const response = await setPassword(passwordData);
 
-      if (response.status === 'success') {
-        Alert.alert(
-          "Chúc mừng!", 
-          response.message || "Đăng ký thành công! Chào mừng bạn đến với Carpooling!",
-          [
-            {
-              text: "Bắt đầu sử dụng",
-              onPress: () => {
-                // Navigate to main app or welcome screen
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Main' }], // or 'Welcome', 'Home', etc.
-                });
-              }
-            }
-          ]
-        );
+      if (response.status === "success") {
+        navigation.navigate("RegisterSuccess");
       }
-      
     } catch (error) {
-      console.error('Set password error:', error);
-      
+      console.error("Set password error:", error);
+
       let errorMessage = "Đặt mật khẩu thất bại. Vui lòng thử lại.";
-      
+
       if (error.message) {
         errorMessage = error.message;
-      } else if (typeof error === 'string') {
+      } else if (typeof error === "string") {
         errorMessage = error;
       }
-      
+
       Alert.alert("Lỗi", errorMessage);
     } finally {
       setLoading(false);
-      navigation.navigate("RegisterSuccess");
     }
   };
 
   const getPasswordStrength = (pwd) => {
     if (!pwd) return { strength: 0, text: "", color: "#B3B3B3" };
-    
+
     let score = 0;
     const checks = [
       pwd.length >= 6,
@@ -145,13 +128,14 @@ const SetPasswordScreen = () => {
       /[a-z]/.test(pwd),
       /[A-Z]/.test(pwd),
       /\d/.test(pwd),
-      /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+      /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
     ];
-    
+
     score = checks.filter(Boolean).length;
-    
+
     if (score <= 2) return { strength: 1, text: "Yếu", color: "#FF6B6B" };
-    if (score <= 4) return { strength: 2, text: "Trung bình", color: "#FFB74D" };
+    if (score <= 4)
+      return { strength: 2, text: "Trung bình", color: "#FFB74D" };
     return { strength: 3, text: "Mạnh", color: "#4CAF50" };
   };
 
@@ -165,7 +149,8 @@ const SetPasswordScreen = () => {
       {/* Title */}
       <Text style={styles.title}>Đặt mật khẩu</Text>
       <Text style={styles.subtitle}>
-        Tạo mật khẩu bảo mật cho tài khoản {phone ? `***${phone.slice(-4)}` : 'của bạn'}
+        Tạo mật khẩu bảo mật cho tài khoản{" "}
+        {phone ? `***${phone.slice(-4)}` : "của bạn"}
       </Text>
 
       {/* Input: Password */}
@@ -192,17 +177,19 @@ const SetPasswordScreen = () => {
       {password.length > 0 && (
         <View style={styles.strengthContainer}>
           <View style={styles.strengthBar}>
-            <View 
+            <View
               style={[
-                styles.strengthFill, 
-                { 
+                styles.strengthFill,
+                {
                   width: `${(passwordStrength.strength / 3) * 100}%`,
-                  backgroundColor: passwordStrength.color 
-                }
-              ]} 
+                  backgroundColor: passwordStrength.color,
+                },
+              ]}
             />
           </View>
-          <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+          <Text
+            style={[styles.strengthText, { color: passwordStrength.color }]}
+          >
             {passwordStrength.text}
           </Text>
         </View>
@@ -215,7 +202,9 @@ const SetPasswordScreen = () => {
           placeholderTextColor="#8B8B8B"
           style={[
             styles.input,
-            confirmPassword && password !== confirmPassword && styles.inputError
+            confirmPassword &&
+              password !== confirmPassword &&
+              styles.inputError,
           ]}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -227,7 +216,9 @@ const SetPasswordScreen = () => {
           style={styles.eyeButton}
           onPress={() => setShowConfirmPassword(!showConfirmPassword)}
         >
-          <Text style={styles.eyeText}>{showConfirmPassword ? "🙈" : "👁️"}</Text>
+          <Text style={styles.eyeText}>
+            {showConfirmPassword ? "🙈" : "👁️"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -241,15 +232,14 @@ const SetPasswordScreen = () => {
         <Text style={styles.requirementsTitle}>Mật khẩu phải có:</Text>
         <Text style={styles.requirementText}>• Ít nhất 6 ký tự</Text>
         <Text style={styles.requirementText}>• Ít nhất 1 số</Text>
-        <Text style={styles.requirementText}>• Nên có chữ hoa, chữ thường và ký tự đặc biệt</Text>
+        <Text style={styles.requirementText}>
+          • Nên có chữ hoa, chữ thường và ký tự đặc biệt
+        </Text>
       </View>
 
       {/* Register Button */}
-      <TouchableOpacity 
-        style={[
-          styles.registerButton,
-          loading && styles.disabledButton
-        ]} 
+      <TouchableOpacity
+        style={[styles.registerButton, loading && styles.disabledButton]}
         onPress={handleSetPassword}
         disabled={loading}
       >
@@ -261,7 +251,7 @@ const SetPasswordScreen = () => {
       </TouchableOpacity>
 
       {/* Back Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
         disabled={loading}

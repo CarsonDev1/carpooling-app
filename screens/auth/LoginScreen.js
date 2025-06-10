@@ -16,7 +16,7 @@ import { loginUser } from "../../api/authApi";
 import { useAuth } from "../../context/AuthContext";
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -25,10 +25,10 @@ const LoginScreen = ({ navigation }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!email.trim()) {
-      newErrors.email = "Email là bắt buộc";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Email không hợp lệ";
+    if (!phone.trim()) {
+      newErrors.phone = "Số điện thoại là bắt buộc";
+    } else if (!/^[0-9]{10}$/.test(phone)) {
+      newErrors.phone = "Số điện thoại không hợp lệ";
     }
     if (!password.trim()) {
       newErrors.password = "Mật khẩu là bắt buộc";
@@ -40,18 +40,22 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    navigation.navigate("HomeMain");
     if (!validateForm()) return;
     try {
       setLoading(true);
       setErrors({});
       const response = await loginUser({
-        email: email.toLowerCase().trim(),
+        phone: phone.trim(),
         password,
       });
       if (response.status === "success") {
         login(response.data.user, response.data.token);
-        Alert.alert("Thành công", "Đăng nhập thành công!");
+        Alert.alert("Thành công", "Đăng nhập thành công!", [
+          {
+            text: "OK",
+            onPress: () => navigation.navigate("HomeMain"),
+          },
+        ]);
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -84,17 +88,17 @@ const LoginScreen = ({ navigation }) => {
         {/* Title */}
         <Text style={styles.title}>Đăng nhập</Text>
 
-        {/* Email input */}
+        {/* Phone input */}
         <TextInput
-          style={[styles.input, errors.email && styles.inputError]}
+          style={[styles.input, errors.phone && styles.inputError]}
           placeholder="Số điện thoại"
           placeholderTextColor="#999"
           keyboardType="phone-pad"
-          value={email}
-          onChangeText={setEmail}
+          value={phone}
+          onChangeText={setPhone}
           editable={!loading}
         />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
         {/* Password input */}
         <TextInput
@@ -121,7 +125,7 @@ const LoginScreen = ({ navigation }) => {
 
         {/* Login button */}
         <TouchableOpacity
-          style={styles.loginButton}
+          style={[styles.loginButton, loading && styles.disabledButton]}
           onPress={handleLogin}
           disabled={loading}
         >
@@ -210,6 +214,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   loginButtonText: {
     color: "#fff",
