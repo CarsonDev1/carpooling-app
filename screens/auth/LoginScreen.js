@@ -114,6 +114,7 @@ const LoginScreen = ({ navigation }) => {
         <TouchableOpacity
           onPress={() => navigation.navigate("ForgotPassword")}
           disabled={loading}
+          style={{ alignSelf: "flex-end" }}
         >
           <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
         </TouchableOpacity>
@@ -194,7 +195,10 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     alignSelf: "flex-end",
     fontSize: 14,
-    color: "#4285F4",
+    color: "#8B8B8B",
+    textAlign: "right",
+    display: "flex",
+    justifyContent: "flex-end",
     fontWeight: "600",
     marginBottom: 24,
   },
