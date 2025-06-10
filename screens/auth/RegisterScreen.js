@@ -7,18 +7,106 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { registerUser } from "../../api/authApi";
+
 const { width } = Dimensions.get("window");
 
 const RegisterScreen = () => {
   const [agreed, setAgreed] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
-  const handleRegister = () => {
-    // TODO: Add form validation, API call, etc.
-    navigation.navigate("OTP");
+  // Validate input data
+  const validateForm = () => {
+    if (!fullName.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập tên tài khoản");
+      return false;
+    }
+    
+    if (!phone.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại");
+      return false;
+    }
+
+    // Validate Vietnamese phone number format
+    const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
+    if (!phoneRegex.test(phone)) {
+      Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
+      return false;
+    }
+
+    if (!agreed) {
+      Alert.alert("Lỗi", "Vui lòng đồng ý với điều khoản dịch vụ");
+      return false;
+    }
+
+    return true;
   };
+
+  const handleRegister = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const userData = {
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+      };
+
+      const response = await registerUser(userData);
+      
+      if (response.status === 'success') {
+        Alert.alert(
+          "Thành công", 
+          "Tài khoản được tạo thành công. Mã OTP đã được gửi đến số điện thoại của bạn.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Navigate to OTP screen with user data
+                navigation.navigate("OTP", {
+                  userId: response.data.userId,
+                  phone: response.data.phone,
+                  fullName: response.data.fullName,
+                  developmentOTP: response.data.developmentOTP, // For development only
+                });
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      
+      // Handle different error cases
+      let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      Alert.alert("Lỗi", errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneLogin = () => {
+    // Navigate to login screen
+    navigation.navigate("Login");
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header */}
@@ -33,6 +121,9 @@ const RegisterScreen = () => {
           placeholder="Tên tài khoản"
           placeholderTextColor="#8B8B8B"
           style={styles.input}
+          value={fullName}
+          onChangeText={setFullName}
+          editable={!loading}
         />
       </View>
 
@@ -43,6 +134,9 @@ const RegisterScreen = () => {
           placeholderTextColor="#8B8B8B"
           style={styles.input}
           keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+          editable={!loading}
         />
       </View>
 
@@ -54,6 +148,7 @@ const RegisterScreen = () => {
             styles.checkbox,
             agreed && { backgroundColor: "#57C2FE", borderColor: "#57C2FE" },
           ]}
+          disabled={loading}
         >
           {agreed && <Text style={styles.checkmark}>✔</Text>}
         </TouchableOpacity>
@@ -66,8 +161,19 @@ const RegisterScreen = () => {
       </View>
 
       {/* Đăng ký Button */}
-      <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-        <Text style={styles.buttonText}>Đăng ký</Text>
+      <TouchableOpacity 
+        style={[
+          styles.registerButton, 
+          loading && styles.disabledButton
+        ]} 
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="white" size="small" />
+        ) : (
+          <Text style={styles.buttonText}>Đăng ký</Text>
+        )}
       </TouchableOpacity>
 
       {/* Divider hoặc */}
@@ -78,7 +184,14 @@ const RegisterScreen = () => {
       </View>
 
       {/* Đăng nhập bằng SDT */}
-      <TouchableOpacity style={styles.phoneLoginButton}>
+      <TouchableOpacity 
+        style={[
+          styles.phoneLoginButton,
+          loading && styles.disabledButton
+        ]}
+        onPress={handlePhoneLogin}
+        disabled={loading}
+      >
         <Text style={styles.buttonText}>Đăng nhập bằng Số điện thoại</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -158,6 +271,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
     marginBottom: 24,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   dividerContainer: {
     flexDirection: "row",

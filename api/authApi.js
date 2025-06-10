@@ -2,21 +2,51 @@
 import api from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Đăng ký người dùng mới
+// Đăng ký người dùng mới - Updated for OTP flow
 export const registerUser = async (userData) => {
 	try {
 		const response = await api.post('/auth/register', userData);
 
+		// Register endpoint now returns OTP info instead of token
 		if (response.data.status === 'success') {
-			// Lưu token và thông tin user
-			await AsyncStorage.setItem('token', response.data.data.token);
-			await AsyncStorage.setItem('user', JSON.stringify(response.data.data.user));
+			// Don't save token here since it's OTP flow
+			// Token will be saved after OTP verification
+			console.log('Registration successful, OTP sent');
 		}
 
 		return response.data;
 	} catch (error) {
 		console.error('Register error:', error);
 		throw error.response?.data || { message: 'Đăng ký thất bại' };
+	}
+};
+
+// Verify OTP - New function for OTP verification
+export const verifyOtp = async (otpData) => {
+	try {
+		const response = await api.post('/auth/verify-otp', otpData);
+
+		if (response.data.status === 'success') {
+			// Save token and user info after successful OTP verification
+			await AsyncStorage.setItem('token', response.data.data.token);
+			await AsyncStorage.setItem('user', JSON.stringify(response.data.data.user));
+		}
+
+		return response.data;
+	} catch (error) {
+		console.error('OTP verification error:', error);
+		throw error.response?.data || { message: 'Xác thực OTP thất bại' };
+	}
+};
+
+// Resend OTP - New function to resend OTP
+export const resendOtp = async (userId) => {
+	try {
+		const response = await api.post('/auth/resend-otp', { userId });
+		return response.data;
+	} catch (error) {
+		console.error('Resend OTP error:', error);
+		throw error.response?.data || { message: 'Gửi lại OTP thất bại' };
 	}
 };
 
