@@ -47,7 +47,7 @@ export default function LoadingAuthScreen({ navigation }) {
             style={styles["2g-imageChibi"]}
           />
           <Text style={styles["2g-welcomeTitle"]}>Chào mừng đến với</Text>
-          <Text style={styles["2g-appName"]}>2gether</Text>
+          <Text style={styles["2g-welcomeTitle"]}>2gether</Text>
           <Text style={styles["2g-welcomeDescription"]}>
             Đi ké xe đi cho đỡ tốn tiền nè bạn ơi!
           </Text>

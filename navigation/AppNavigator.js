@@ -22,35 +22,47 @@ import LoadingAuthScreen from "../screens/auth/LoadingAuthScreen"; // Auth loadi
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Auth Stack Navigator
-const AuthStack = () => {
+// Root Stack Navigator
+const RootStack = () => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen
-        name="OTP"
-        component={OTPScreen}
-        options={{ title: "Xác minh OTP" }}
-      />
-      <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
-      <Stack.Screen name="RegisterSuccess" component={RegisterSuccessScreen} />
-      <Stack.Screen name="OTPPassWord" component={OTPPassWordScreen} />
-      <Stack.Screen 
-        name="AuthLoading" 
-        component={LoadingAuthScreen}
-        options={{ headerShown: false }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {isAuthenticated ? (
+        // Authenticated Stack
+        <Stack.Screen name="MainApp" component={MainTabs} />
+      ) : (
+        // Auth Stack
+        <>
+          <Stack.Screen name="AuthLoading" component={LoadingAuthScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
+          <Stack.Screen
+            name="OTP"
+            component={OTPScreen}
+            options={{ title: "Xác minh OTP" }}
+          />
+          <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
+          <Stack.Screen
+            name="RegisterSuccess"
+            component={RegisterSuccessScreen}
+          />
+          <Stack.Screen name="OTPPassWord" component={OTPPassWordScreen} />
+        </>
+      )}
     </Stack.Navigator>
   );
 };
 
-// Home Stack Navigator - THÊM AuthLoading vào đây
+// Home Stack Navigator
 const HomeStack = () => {
   return (
     <Stack.Navigator
@@ -69,21 +81,12 @@ const HomeStack = () => {
         component={HomeScreen}
         options={{ title: "Carpooling" }}
       />
-      <Stack.Screen 
-        name="Loading" 
+      <Stack.Screen
+        name="Loading"
         component={LoadingScreen}
-        options={{ 
+        options={{
           headerShown: false,
-          title: "Đang tải..."
-        }}
-      />
-      {/* THÊM AuthLoading vào HomeStack */}
-      <Stack.Screen 
-        name="AuthLoading" 
-        component={LoadingAuthScreen}
-        options={{ 
-          headerShown: false,
-          title: "Loading Auth"
+          title: "Đang tải...",
         }}
       />
     </Stack.Navigator>
@@ -167,15 +170,9 @@ const MainTabs = () => {
 
 // Main App Navigator
 const AppNavigator = () => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
   return (
     <NavigationContainer>
-      {isAuthenticated ? <MainTabs /> : <AuthStack />}
+      <RootStack />
     </NavigationContainer>
   );
 };

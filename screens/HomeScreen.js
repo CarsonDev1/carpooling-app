@@ -8,10 +8,35 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Image,
 } from "react-native";
 import { getCurrentUser } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
+
+const upcomingTrips = [
+  {
+    date: "24/6",
+    time: "08:30",
+    from: "Nhà",
+    to: "27 Đường Láng, Ba...",
+    status: "Đã ghép nối",
+  },
+  {
+    date: "24/6",
+    time: "13:30",
+    from: "27 Đường Láng, Ba...",
+    to: "Nhà",
+    status: "Đã ghép nối",
+  },
+  {
+    date: "24/6",
+    time: "17:30",
+    from: "Nhà",
+    to: "231 Thái Hà, Đống...",
+    status: "Chưa ghép nối",
+  },
+];
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -43,10 +68,7 @@ export default function HomeScreen() {
       "Xác nhận đăng xuất",
       "Bạn có chắc chắn muốn đăng xuất không?",
       [
-        {
-          text: "Hủy",
-          style: "cancel",
-        },
+        { text: "Hủy", style: "cancel" },
         {
           text: "Đăng xuất",
           style: "destructive",
@@ -63,15 +85,6 @@ export default function HomeScreen() {
     );
   };
 
-  const handleNavigateToSplash = () => {
-    try {
-      navigation.navigate("AuthLoading");
-    } catch (error) {
-      console.error("Navigation error:", error);
-      Alert.alert("Lỗi", "Không thể chuyển trang");
-    }
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -84,114 +97,86 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-       
-
-        {/* Welcome Section */}
-        {userData && (
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>
-              Xin chào, {userData.fullName}! 👋
-            </Text>
-            <Text style={styles.welcomeSubtext}>
-              Chào mừng bạn đến với ứng dụng đi chung xe
-            </Text>
-          </View>
-        )}
-
-        {/* User Info Card */}
-        {userData && (
-          <View style={styles.userInfoCard}>
-            <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
-            
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Text style={styles.infoIcon}>📱</Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.label}>Số điện thoại</Text>
-                <Text style={styles.value}>{userData.phone}</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Text style={styles.infoIcon}>
-                  {userData.isActive ? "✅" : "❌"}
-                </Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.label}>Trạng thái</Text>
-                <Text style={[
-                  styles.value,
-                  { color: userData.isActive ? "#4CAF50" : "#F44336" }
-                ]}>
-                  {userData.isActive ? "Đang hoạt động" : "Đã khóa"}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Text style={styles.infoIcon}>👤</Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.label}>Vai trò</Text>
-                <Text style={styles.value}>{userData.role}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
-          <Text style={styles.sectionTitle}>Chức năng</Text>
-          
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.primaryButton]} 
-            onPress={handleNavigateToSplash}
-          >
-            <Text style={styles.actionButtonIcon}>🔄</Text>
-            <Text style={styles.actionButtonText}>Chuyển trang loading</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.secondaryButton]} 
-            onPress={fetchUserData}
-          >
-            <Text style={styles.actionButtonIcon}>🔄</Text>
-            <Text style={[styles.actionButtonText, { color: "#4285F4" }]}>
-              Làm mới thông tin
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.welcomeSection}>
+          <Image
+            source={require("../assets/img-header-main.png")}
+            style={styles.imageHeaderMain}
+          />
         </View>
 
-        {/* Quick Stats */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Thống kê nhanh</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Chuyến đi</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Đánh giá</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Điểm</Text>
-            </View>
+        <View style={styles.sectionMain}>
+          <Image
+            source={require("../assets/img-passenger-main.png")}
+            style={styles.imageHeader}
+          />
+          <Image
+            source={require("../assets/img-driver-main.png")}
+            style={styles.imageHeader}
+          />
+        </View>
+
+        {/* Chuyến đi sắp tới */}
+        <View style={styles.tripSection}>
+          <Text style={styles.tripTitle}>Chuyến đi sắp tới</Text>
+        </View>
+        <View style={styles.tripSection}>
+          <View style={styles.leftColumn}>
+            <Image
+              source={require("../assets/img-view-schedule-main.png")} // bạn có thể thay đổi ảnh lịch tại đây
+              style={styles.calendarImage}
+            />
+          </View>
+
+          {/* Danh sách chuyến đi bên phải */}
+          <View style={styles.rightColumn}>
+            {upcomingTrips.map((trip, index) => (
+              <View key={index} style={styles.tripCard}>
+                <Text
+                  style={[
+                    styles.tripStatus,
+                    trip.status === "Đã ghép nối"
+                      ? styles.statusSuccess
+                      : styles.statusPending,
+                  ]}
+                >
+                  {trip.status}
+                </Text>
+                <View style={styles.tripTime}>
+                  <Text style={styles.tripDate}>{trip.date}</Text>
+                  <Text style={styles.tripHour}>{trip.time}</Text>
+                </View>
+                <View style={styles.tripDetail}>
+                  <Text
+                    style={styles.tripPlace}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {trip.from}
+                  </Text>
+                  <Text
+                    style={styles.tripPlace}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {trip.to}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F7FA",
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -204,180 +189,104 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  scrollContent: {
-    flexGrow: 1,
+  welcomeSection: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: -20,
   },
-  header: {
-    backgroundColor: "#4285F4",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  imageHeaderMain: {
+    width: "100%",
+    height: 200,
+    resizeMode: "contain",
   },
-  headerContent: {
+  sectionMain: {
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingHorizontal: 20,
+    gap: 20,
+    marginBottom: 20,
+  },
+  imageHeader: {
+    flex: 1,
+    height: 150,
+    resizeMode: "contain",
+  },
+
+  // --- Chuyến đi sắp tới ---
+  tripSection: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginTop: 10,
+    gap: 4,
+  },
+  leftColumn: {
+    flex: 5, // 40%
     alignItems: "center",
   },
-  appTitle: {
+  tripTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#fff",
-  },
-  logoutButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  logoutText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  welcomeSection: {
-    padding: 20,
-    alignItems: "center",
-  },
-  welcomeText: {
-    fontSize: 26,
-    fontWeight: "700",
     color: "#2C3E50",
-    textAlign: "center",
     marginBottom: 8,
   },
-  welcomeSubtext: {
-    fontSize: 16,
-    color: "#7F8C8D",
-    textAlign: "center",
+  calendarImage: {
+    width: "100%",
   },
-  userInfoCard: {
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 20,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2C3E50",
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  infoIconContainer: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  infoIcon: {
-    fontSize: 20,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 14,
-    color: "#7F8C8D",
-    marginBottom: 2,
-  },
-  value: {
-    fontSize: 16,
-    color: "#2C3E50",
-    fontWeight: "600",
-  },
-  actionSection: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2C3E50",
-    marginBottom: 12,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  primaryButton: {
-    backgroundColor: "#4CAF50",
-  },
-  secondaryButton: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#4285F4",
-  },
-  actionButtonIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-    flex: 1,
-  },
-  statsSection: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statCard: {
-    backgroundColor: "#fff",
-    flex: 1,
-    marginHorizontal: 4,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "700",
+
+  linkText: {
+    fontSize: 13,
     color: "#4285F4",
-    marginBottom: 4,
+    textDecorationLine: "underline",
+    marginTop: 4,
   },
-  statLabel: {
+  rightColumn: {
+    flex: 5, // 60%
+    gap: 4,
+  },
+  tripCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D8E6F3",
+    padding: 8,
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  tripTime: {
+    flex: 3,
+    alignItems: "center",
+  },
+  tripDate: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2C3E50",
+  },
+  tripHour: {
     fontSize: 12,
     color: "#7F8C8D",
-    textAlign: "center",
+    marginTop: 4,
+  },
+  tripDetail: {
+    flex: 7,
+    paddingLeft: 12,
+  },
+  tripPlace: {
+    fontSize: 12,
+    color: "#2C3E50",
+  },
+  tripStatus: {
+    marginTop: 4,
+    fontSize: 10,
+    position: "absolute",
+    right: 10,
+    top: 0,
+    fontWeight: "600",
+  },
+  statusSuccess: {
+    color: "#2ECC71",
+  },
+  statusPending: {
+    color: "#E74C3C",
   },
 });
