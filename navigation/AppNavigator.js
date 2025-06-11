@@ -11,12 +11,13 @@ import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPassWordScreen";
 import ProfileScreen from "../screens/ProfileScreen";
-import LoadingScreen from "../screens/LoadingScreen";
+import LoadingScreen from "../screens/LoadingScreen"; // Main loading screen
 import HomeScreen from "../screens/HomeScreen";
 import OTPScreen from "../screens/auth/OTPScreen";
 import SetPasswordScreen from "../screens/auth/SetPasswordScreen";
 import RegisterSuccessScreen from "../screens/auth/RegisterSuccessScreen";
 import OTPPassWordScreen from "../screens/auth/OTPPassWordScreen";
+import LoadingAuthScreen from "../screens/auth/LoadingAuthScreen"; // Auth loading screen
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -32,7 +33,6 @@ const AuthStack = () => {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-
       <Stack.Screen
         name="OTP"
         component={OTPScreen}
@@ -41,11 +41,16 @@ const AuthStack = () => {
       <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
       <Stack.Screen name="RegisterSuccess" component={RegisterSuccessScreen} />
       <Stack.Screen name="OTPPassWord" component={OTPPassWordScreen} />
+      <Stack.Screen 
+        name="AuthLoading" 
+        component={LoadingAuthScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };
 
-// Home Stack Navigator
+// Home Stack Navigator - THÊM AuthLoading vào đây
 const HomeStack = () => {
   return (
     <Stack.Navigator
@@ -60,9 +65,26 @@ const HomeStack = () => {
       }}
     >
       <Stack.Screen
-        name="HomeMain"
+        name="HomeScreen"
         component={HomeScreen}
         options={{ title: "Carpooling" }}
+      />
+      <Stack.Screen 
+        name="Loading" 
+        component={LoadingScreen}
+        options={{ 
+          headerShown: false,
+          title: "Đang tải..."
+        }}
+      />
+      {/* THÊM AuthLoading vào HomeStack */}
+      <Stack.Screen 
+        name="AuthLoading" 
+        component={LoadingAuthScreen}
+        options={{ 
+          headerShown: false,
+          title: "Loading Auth"
+        }}
       />
     </Stack.Navigator>
   );

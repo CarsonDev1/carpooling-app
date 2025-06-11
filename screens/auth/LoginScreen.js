@@ -41,31 +41,38 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!validateForm()) return;
+    
     try {
       setLoading(true);
       setErrors({});
+      
       const response = await loginUser({
         phone: phone.trim(),
         password,
       });
+      
       if (response.status === "success") {
+        // Gọi login từ AuthContext - sẽ tự động chuyển sang MainTabs
         login(response.data.user, response.data.token);
-        Alert.alert("Thành công", "Đăng nhập thành công!", [
-          {
-            text: "OK",
-            onPress: () => navigation.navigate("HomeMain"),
-          },
-        ]);
+        
+        // Hiển thị thông báo thành công
+        Alert.alert("Thành công", "Đăng nhập thành công!");
+        
+        // Không cần navigation.navigate vì AuthContext sẽ tự động xử lý
+        // AppNavigator sẽ render MainTabs khi isAuthenticated = true
       }
     } catch (error) {
-      console.error("Login error:", error);
+      // console.error("Login error:", error);
+      
       if (error.errors) {
+        // Xử lý lỗi validation từ server
         const serverErrors = {};
         error.errors.forEach((err) => {
           serverErrors[err.field] = err.message;
         });
         setErrors(serverErrors);
       } else {
+        // Hiển thị lỗi chung
         Alert.alert("Lỗi đăng nhập", error.message || "Đăng nhập thất bại");
       }
     } finally {
@@ -97,6 +104,8 @@ const LoginScreen = ({ navigation }) => {
           value={phone}
           onChangeText={setPhone}
           editable={!loading}
+          autoCapitalize="none"
+          autoCorrect={false}
         />
         {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
@@ -109,6 +118,8 @@ const LoginScreen = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           editable={!loading}
+          autoCapitalize="none"
+          autoCorrect={false}
         />
         {errors.password && (
           <Text style={styles.errorText}>{errors.password}</Text>
@@ -118,7 +129,7 @@ const LoginScreen = ({ navigation }) => {
         <TouchableOpacity
           onPress={() => navigation.navigate("ForgotPassword")}
           disabled={loading}
-          style={{ alignSelf: "flex-end" }}
+          style={styles.forgotPasswordContainer}
         >
           <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
         </TouchableOpacity>
@@ -130,7 +141,7 @@ const LoginScreen = ({ navigation }) => {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color="white" size="small" />
           ) : (
             <Text style={styles.loginButtonText}>Đăng nhập</Text>
           )}
@@ -171,52 +182,71 @@ const styles = StyleSheet.create({
     backgroundColor: "#57C2FE",
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
     color: "#000",
-    marginBottom: 30,
+    marginBottom: 40,
+    textAlign: "center",
   },
   input: {
     width: "100%",
-    height: 44,
+    height: 50,
     borderWidth: 1,
-    borderColor: "#B3B3B3",
-    borderRadius: 10,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
     backgroundColor: "#fff",
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   inputError: {
     borderColor: "#F44336",
+    borderWidth: 1.5,
   },
   errorText: {
     alignSelf: "flex-start",
     color: "#F44336",
     fontSize: 13,
     marginBottom: 8,
+    marginLeft: 4,
+  },
+  forgotPasswordContainer: {
+    alignSelf: "flex-end",
+    marginBottom: 32,
   },
   forgotPasswordText: {
-    alignSelf: "flex-end",
     fontSize: 14,
     color: "#8B8B8B",
-    textAlign: "right",
-    display: "flex",
-    justifyContent: "flex-end",
-    fontWeight: "600",
-    marginBottom: 24,
+    fontWeight: "500",
   },
   loginButton: {
     width: "100%",
-    height: 44,
+    height: 50,
     backgroundColor: "#57C2FE",
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    shadowColor: "#57C2FE",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   disabledButton: {
     opacity: 0.6,
+    shadowOpacity: 0.1,
   },
   loginButtonText: {
     color: "#fff",
@@ -225,14 +255,16 @@ const styles = StyleSheet.create({
   },
   registerContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   registerText: {
     fontSize: 14,
-    color: "#000",
+    color: "#666",
   },
   registerLink: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#57C2FE",
   },
 });
