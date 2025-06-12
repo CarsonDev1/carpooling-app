@@ -82,7 +82,7 @@ const HomeStack = () => {
       <Stack.Screen
         name="HomeScreen"
         component={HomeScreen}
-        options={{ title: "Carpooling" }}
+        options={{ title: "2GETHER" }}
       />
       <Stack.Screen
         name="Schedule"
