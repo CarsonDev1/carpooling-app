@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,15 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
+  Animated,
+  Dimensions,
 } from "react-native";
 import { getCurrentUser } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
+import Svg, { Path, Circle, Ellipse } from "react-native-svg";
+
+const { width: screenWidth } = Dimensions.get("window");
 
 const upcomingTrips = [
   {
@@ -37,6 +42,116 @@ const upcomingTrips = [
     status: "Chưa ghép nối",
   },
 ];
+
+// Component đám mây
+const CloudComponent = ({ size = 30, style }) => (
+  <Image
+    source={require("../assets/ic-cloud.png")}
+    style={{ width: 60, height: 30 }}
+  />
+);
+
+// Component nhân vật hành khách
+const PassengerCharacter = ({ size = 60 }) => (
+  <Image
+    source={require("../assets/ic-monkey.png")}
+    style={{ width: 65, height: 100 }}
+  />
+);
+
+// Component nhân vật tài xế
+const DriverCharacter = ({ size = 60 }) => (
+  <Image
+    source={require("../assets/ic-driver.png")}
+    style={{ width: 65, height: 100 }}
+  />
+);
+
+const AnimatedCloud = ({ delay = 0, speed, size, top }) => {
+  const translateX = useRef(new Animated.Value(-180)).current; // Bắt đầu từ ngoài khung bên trái
+  const frameWidth = (screenWidth - 40) / 2 - 10; // Width của mỗi khung trừ padding
+
+  useEffect(() => {
+    const animate = () => {
+      // Delay trước khi bắt đầu animation
+      setTimeout(() => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: frameWidth + 60, // Bay ra ngoài khung bên phải
+              duration: speed,
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: -190, // Reset về ngoài khung bên trái
+              duration: 0,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      }, delay);
+    };
+
+    animate();
+  }, [translateX, speed, frameWidth, delay]);
+  return (
+    <Animated.View
+      style={[
+        styles.cloudContainer,
+        {
+          transform: [{ translateX }],
+          top: top,
+        },
+      ]}
+    >
+      <CloudComponent size={size} />
+    </Animated.View>
+  );
+};
+
+// Component khung hành khách
+const PassengerFrame = () => {
+  return (
+    <View style={styles.animatedFrame}>
+      {/* Mây bay */}
+      <AnimatedCloud initialPosition={-40} speed={9000} size={25} top={10} />
+      <AnimatedCloud initialPosition={-60} speed={10000} size={20} top={25} />
+      <AnimatedCloud initialPosition={-80} speed={11000} size={22} top={40} />
+
+      {/* Nhân vật */}
+      <View style={styles.characterContainer2}>
+        <PassengerCharacter size={50} />
+      </View>
+
+      {/* Tiêu đề */}
+      <View style={styles.titleContainer}>
+        <Text style={styles.frameTitle}>Hành khách</Text>
+      </View>
+    </View>
+  );
+};
+
+// Component khung tài xế
+const DriverFrame = () => {
+  return (
+    <View style={styles.animatedFrame}>
+      {/* Mây bay */}
+      <AnimatedCloud initialPosition={-50} speed={7500} size={24} top={12} />
+      <AnimatedCloud initialPosition={-70} speed={9000} size={18} top={30} />
+      <AnimatedCloud initialPosition={-90} speed={6500} size={26} top={45} />
+
+      {/* Nhân vật */}
+      <View style={styles.characterContainer}>
+        <DriverCharacter size={50} />
+      </View>
+
+      {/* Tiêu đề */}
+      <View style={styles.titleContainer}>
+        <Text style={styles.frameTitle}>Tài xế</Text>
+      </View>
+    </View>
+  );
+};
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -105,14 +220,8 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.sectionMain}>
-          <Image
-            source={require("../assets/img-passenger-main.png")}
-            style={styles.imageHeader}
-          />
-          <Image
-            source={require("../assets/img-driver-main.png")}
-            style={styles.imageHeader}
-          />
+          <PassengerFrame />
+          <DriverFrame />
         </View>
 
         {/* Chuyến đi sắp tới */}
@@ -122,7 +231,7 @@ export default function HomeScreen() {
         <View style={styles.tripSection}>
           <View style={styles.leftColumn}>
             <Image
-              source={require("../assets/img-view-schedule-main.png")} // bạn có thể thay đổi ảnh lịch tại đây
+              source={require("../assets/img-view-schedule-main.png")}
               style={styles.calendarImage}
             />
           </View>
@@ -165,6 +274,62 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
+        <View style={styles.favoriteHeader}>
+          <Text style={styles.tripTitle}>Điểm đến yêu thích</Text>
+          <TouchableOpacity>
+            <Image
+              source={require("../assets/ic-add.png")}
+              style={styles.favoriteAddIcon}
+            />
+          </TouchableOpacity>
+        </View>
+        {[
+          {
+            icon: require("../assets/icon-location.png"),
+            label: "Địa điểm",
+            address: "93 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
+          },
+          {
+            icon: require("../assets/icon-school.png"),
+            label: "Trường học",
+            address: "168 Nguyễn Trãi, Thanh Xuân, Hà Nội",
+          },
+          {
+            icon: require("../assets/icon-home.png"),
+            label: "Nhà",
+            address: "77 Lê Văn Lương, Thanh Xuân, Hà Nội",
+          },
+        ].map((item, idx) => (
+          <View key={idx} style={styles.favoriteRow}>
+            <View style={styles.favoriteLeft}>
+              <Image source={item.icon} style={styles.favoriteIcon} />
+              <TouchableOpacity style={styles.favoriteDropdown}>
+                <Text style={styles.favoriteDropdownText} numberOfLines={1}>
+                  {item.label}
+                </Text>
+                <Image
+                  source={require("../assets/icon-dropdown.png")}
+                  style={styles.favoriteDropdownIcon}
+                />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.favoriteRight}>
+              <Text
+                style={styles.favoriteAddress}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {item.address}
+              </Text>
+              <TouchableOpacity>
+                <Image
+                  source={require("../assets/icon-edit.png")}
+                  style={styles.favoriteEditIcon}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -206,10 +371,46 @@ const styles = StyleSheet.create({
     gap: 20,
     marginBottom: 20,
   },
-  imageHeader: {
+
+  // Styles cho khung animation mới
+  animatedFrame: {
     flex: 1,
     height: 150,
-    resizeMode: "contain",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    borderWidth: 3,
+    borderColor: "#A0E3F2",
+    position: "relative",
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cloudContainer: {
+    position: "absolute",
+    zIndex: 1,
+  },
+  characterContainer: {
+    position: "absolute",
+    top: 30,
+    right: 15,
+    zIndex: 10,
+  },
+  characterContainer2: {
+    position: "absolute",
+    top: 30,
+    right: 0,
+    zIndex: 10,
+  },
+  titleContainer: {
+    position: "absolute",
+    bottom: 15,
+    left: 15,
+    zIndex: 10,
+  },
+  frameTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333333",
   },
 
   // --- Chuyến đi sắp tới ---
@@ -219,8 +420,89 @@ const styles = StyleSheet.create({
     marginTop: 10,
     gap: 4,
   },
+  favoriteHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  favoriteAddIcon: {
+    width: 22,
+    height: 22,
+  },
+  favoriteRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 8,
+   
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+    gap: 10,
+  },
+  favoriteLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 3,
+  },
+  favoriteIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: "contain",
+    marginRight: 6,
+  },
+  favoriteDropdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F7FA",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: 90,
+    minWidth: 90,
+    flex: 1,
+  },
+  favoriteDropdownText: {
+    fontWeight: "600",
+    color: "#222",
+    fontSize: 13,
+    textAlign: "center",
+    flex: 1,
+  },
+  favoriteDropdownIcon: {
+    width: 10,
+    height: 10,
+    resizeMode: "contain",
+  },
+  favoriteRight: {
+    flex: 6,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  favoriteAddress: {
+    fontSize: 14,
+    color: "#222",
+    flex: 1,
+    marginRight: 6,
+    overflow: "hidden",
+    numberOfLines: 1,
+    ellipsizeMode: "tail",
+  },
+  favoriteEditIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: "contain",
+    marginTop: 2,
+  },
   leftColumn: {
-    flex: 5, // 40%
+    flex: 6,
     alignItems: "center",
   },
   tripTitle: {
@@ -232,7 +514,6 @@ const styles = StyleSheet.create({
   calendarImage: {
     width: "100%",
   },
-
   linkText: {
     fontSize: 13,
     color: "#4285F4",
@@ -240,7 +521,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   rightColumn: {
-    flex: 5, // 60%
+    flex: 5,
     gap: 4,
   },
   tripCard: {
