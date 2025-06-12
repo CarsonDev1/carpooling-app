@@ -18,6 +18,9 @@ import SetPasswordScreen from "../screens/auth/SetPasswordScreen";
 import RegisterSuccessScreen from "../screens/auth/RegisterSuccessScreen";
 import OTPPassWordScreen from "../screens/auth/OTPPassWordScreen";
 import LoadingAuthScreen from "../screens/auth/LoadingAuthScreen"; // Auth loading screen
+import ScheduleScreen from "../screens/ScheduleScreen";
+import HistoryScreen from "../screens/HistoryScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -82,6 +85,11 @@ const HomeStack = () => {
         options={{ title: "Carpooling" }}
       />
       <Stack.Screen
+        name="Schedule"
+        component={ScheduleScreen}
+        options={{ title: "Lịch trình" }}
+      />
+      <Stack.Screen
         name="Loading"
         component={LoadingScreen}
         options={{
@@ -116,6 +124,52 @@ const ProfileStack = () => {
   );
 };
 
+// History Stack Navigator
+const HistoryStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: "#4285F4",
+        },
+        headerTintColor: "white",
+        headerTitleStyle: {
+          fontWeight: "bold",
+        },
+      }}
+    >
+      <Stack.Screen
+        name="HistoryMain"
+        component={HistoryScreen}
+        options={{ title: "Lịch sử" }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+// Notifications Stack Navigator
+const NotificationsStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: "#4285F4",
+        },
+        headerTintColor: "white",
+        headerTitleStyle: {
+          fontWeight: "bold",
+        },
+      }}
+    >
+      <Stack.Screen
+        name="NotificationsMain"
+        component={NotificationsScreen}
+        options={{ title: "Thông báo" }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 // Main Tab Navigator
 const MainTabs = () => {
   return (
@@ -128,8 +182,10 @@ const MainTabs = () => {
 
           if (route.name === "Home") {
             iconName = "home";
-          } else if (route.name === "Favorites") {
-            iconName = "favorite";
+          } else if (route.name === "History") {
+            iconName = "history";
+          } else if (route.name === "Notifications") {
+            iconName = "notifications";
           } else if (route.name === "Profile") {
             iconName = "person";
           }
@@ -158,6 +214,16 @@ const MainTabs = () => {
         name="Home"
         component={HomeStack}
         options={{ tabBarLabel: "Trang chủ" }}
+      />
+      <Tab.Screen
+        name="History"
+        component={HistoryStack}
+        options={{ tabBarLabel: "Lịch sử" }}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsStack}
+        options={{ tabBarLabel: "Thông báo" }}
       />
       <Tab.Screen
         name="Profile"

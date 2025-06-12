@@ -230,10 +230,12 @@ export default function HomeScreen() {
         </View>
         <View style={styles.tripSection}>
           <View style={styles.leftColumn}>
-            <Image
-              source={require("../assets/img-view-schedule-main.png")}
-              style={styles.calendarImage}
-            />
+            <TouchableOpacity onPress={() => navigation.navigate('Schedule')}>
+              <Image
+                source={require("../assets/img-view-schedule-main.png")}
+                style={styles.calendarImage}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Danh sách chuyến đi bên phải */}
@@ -503,7 +505,7 @@ const styles = StyleSheet.create({
   },
   leftColumn: {
     flex: 6,
-    alignItems: "center",
+    // alignItems: "center",
   },
   tripTitle: {
     fontSize: 24,
@@ -513,6 +515,7 @@ const styles = StyleSheet.create({
   },
   calendarImage: {
     width: "100%",
+    resizeMode: "contain",
   },
   linkText: {
     fontSize: 13,
