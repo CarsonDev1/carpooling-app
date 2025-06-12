@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 // Import screens
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
-import ForgotPasswordScreen from "../screens/auth/ForgotPassWordScreen";
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import LoadingScreen from "../screens/LoadingScreen"; // Main loading screen
 import HomeScreen from "../screens/HomeScreen";
