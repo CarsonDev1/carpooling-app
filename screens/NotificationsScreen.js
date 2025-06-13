@@ -58,7 +58,7 @@ const NotificationsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Thông báo</Text>
+   
 
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -88,7 +88,7 @@ const NotificationsScreen = () => {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.contentBox}>
+      <ScrollView style={styles.contentBox} showsVerticalScrollIndicator={false}>
         {tab === "messages" &&
           messages.map((item, index) => (
             <View key={index} style={styles.messageItem}>
@@ -105,12 +105,17 @@ const NotificationsScreen = () => {
           ))}
 
         {tab === "notifications" &&
-          notifications.map((text, index) => (
-            <View key={index} style={styles.notificationItem}>
-              <Text style={styles.notificationText}>{text}</Text>
-              <View style={styles.dotOverlay} />
-            </View>
-          ))}
+         notifications.map((text, index) => (
+          <View
+            key={index}
+            style={[
+              styles.notificationItem,
+              index < notifications.length - 1 && styles.notificationItemBorder,
+            ]}>
+            <Text style={styles.notificationText}>{text}</Text>
+            <View style={styles.dotOverlay} />
+          </View>
+        ))}
       </ScrollView>
     </View>
   );
@@ -132,6 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     borderRadius: 12,
     marginBottom: 12,
+    marginTop: 20,
   },
   tab: {
     flex: 1,
@@ -191,10 +197,15 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   notificationItem: {
-    marginBottom: 18,
-    position: "relative",
+    position: 'relative',
+    paddingVertical: 12,
     paddingRight: 16,
   },
+  notificationItemBorder: {
+    borderBottomWidth: 0.8,
+    borderColor: '#ddd',
+  },
+  
   notificationText: {
     fontSize: 13,
     color: "#333",

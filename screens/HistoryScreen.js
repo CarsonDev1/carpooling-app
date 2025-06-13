@@ -144,7 +144,7 @@ const HistoryScreen = () => {
   const [tab, setTab] = useState("hanhkhach");
 
   const renderList = (dataList) => (
-    <ScrollView style={styles.list}>
+    <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
       {dataList.map((item, index) => (
         <View key={index} style={styles.card}>
           <View

@@ -1,3 +1,4 @@
+// Đảm bảo TẤT CẢ import đều ở đây, trước bất kỳ code nào khác
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -15,31 +16,31 @@ import {
 import { getCurrentUser } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-import Svg, { Path, Circle, Ellipse } from "react-native-svg";
 
+// Sau đó mới có các constants và components
 const { width: screenWidth } = Dimensions.get("window");
 
-const upcomingTrips = [
+const trips = [
   {
-    date: "24/6",
-    time: "08:30",
-    from: "Nhà",
-    to: "27 Đường Láng, Ba...",
-    status: "Đã ghép nối",
+    date: '24/6',
+    time: '08:30',
+    from: 'Nhà',
+    to: '27 Đường Láng, Ba...',
+    status: 'Đã ghép nối',
   },
   {
-    date: "24/6",
-    time: "13:30",
-    from: "27 Đường Láng, Ba...",
-    to: "Nhà",
-    status: "Đã ghép nối",
+    date: '24/6',
+    time: '13:30',
+    from: '27 Đường Láng, Ba...',
+    to: 'Nhà',
+    status: 'Đã ghép nối',
   },
   {
-    date: "24/6",
-    time: "17:30",
-    from: "Nhà",
-    to: "231 Thái Hà, Đống...",
-    status: "Chưa ghép nối",
+    date: '24/6',
+    time: '17:30',
+    from: 'Nhà',
+    to: '231 Thái Hà, Đống...',
+    status: 'Chưa ghép nối',
   },
 ];
 
@@ -68,22 +69,21 @@ const DriverCharacter = ({ size = 60 }) => (
 );
 
 const AnimatedCloud = ({ delay = 0, speed, size, top }) => {
-  const translateX = useRef(new Animated.Value(-180)).current; // Bắt đầu từ ngoài khung bên trái
-  const frameWidth = (screenWidth - 40) / 2 - 10; // Width của mỗi khung trừ padding
+  const translateX = useRef(new Animated.Value(-180)).current;
+  const frameWidth = (screenWidth - 40) / 2 - 10;
 
   useEffect(() => {
     const animate = () => {
-      // Delay trước khi bắt đầu animation
       setTimeout(() => {
         Animated.loop(
           Animated.sequence([
             Animated.timing(translateX, {
-              toValue: frameWidth + 60, // Bay ra ngoài khung bên phải
+              toValue: frameWidth + 60,
               duration: speed,
               useNativeDriver: true,
             }),
             Animated.timing(translateX, {
-              toValue: -190, // Reset về ngoài khung bên trái
+              toValue: -190,
               duration: 0,
               useNativeDriver: true,
             }),
@@ -94,6 +94,7 @@ const AnimatedCloud = ({ delay = 0, speed, size, top }) => {
 
     animate();
   }, [translateX, speed, frameWidth, delay]);
+
   return (
     <Animated.View
       style={[
@@ -113,17 +114,14 @@ const AnimatedCloud = ({ delay = 0, speed, size, top }) => {
 const PassengerFrame = () => {
   return (
     <View style={styles.animatedFrame}>
-      {/* Mây bay */}
       <AnimatedCloud initialPosition={-40} speed={9000} size={25} top={10} />
       <AnimatedCloud initialPosition={-60} speed={10000} size={20} top={25} />
       <AnimatedCloud initialPosition={-80} speed={11000} size={22} top={40} />
 
-      {/* Nhân vật */}
       <View style={styles.characterContainer2}>
         <PassengerCharacter size={50} />
       </View>
 
-      {/* Tiêu đề */}
       <View style={styles.titleContainer}>
         <Text style={styles.frameTitle}>Hành khách</Text>
       </View>
@@ -135,17 +133,14 @@ const PassengerFrame = () => {
 const DriverFrame = () => {
   return (
     <View style={styles.animatedFrame}>
-      {/* Mây bay */}
       <AnimatedCloud initialPosition={-50} speed={7500} size={24} top={12} />
       <AnimatedCloud initialPosition={-70} speed={9000} size={18} top={30} />
       <AnimatedCloud initialPosition={-90} speed={6500} size={26} top={45} />
 
-      {/* Nhân vật */}
       <View style={styles.characterContainer}>
         <DriverCharacter size={50} />
       </View>
 
-      {/* Tiêu đề */}
       <View style={styles.titleContainer}>
         <Text style={styles.frameTitle}>Tài xế</Text>
       </View>
@@ -223,59 +218,53 @@ export default function HomeScreen() {
           <PassengerFrame />
           <DriverFrame />
         </View>
-
-        {/* Chuyến đi sắp tới */}
+        
         <View style={styles.tripSection}>
           <Text style={styles.tripTitle}>Chuyến đi sắp tới</Text>
         </View>
-        <View style={styles.tripSection}>
-          <View style={styles.leftColumn}>
+        
+        <View style={styles.mainContainer}>
+          <View style={styles.mainLeft}>
             <TouchableOpacity onPress={() => navigation.navigate('Schedule')}>
               <Image
-                source={require("../assets/img-view-schedule-main.png")}
-                style={styles.calendarImage}
+                source={require('../assets/img-view-schedule-main.png')}
+                style={styles.mainCalendarImage}
+                resizeMode="contain"
               />
             </TouchableOpacity>
           </View>
 
-          {/* Danh sách chuyến đi bên phải */}
-          <View style={styles.rightColumn}>
-            {upcomingTrips.map((trip, index) => (
-              <View key={index} style={styles.tripCard}>
-                <Text
-                  style={[
-                    styles.tripStatus,
-                    trip.status === "Đã ghép nối"
-                      ? styles.statusSuccess
-                      : styles.statusPending,
-                  ]}
-                >
-                  {trip.status}
-                </Text>
-                <View style={styles.tripTime}>
-                  <Text style={styles.tripDate}>{trip.date}</Text>
-                  <Text style={styles.tripHour}>{trip.time}</Text>
-                </View>
-                <View style={styles.tripDetail}>
+          <View style={styles.mainRight}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {trips.map((trip, index) => (
+                <View key={index} style={styles.mainTripCard}>
                   <Text
-                    style={styles.tripPlace}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {trip.from}
+                    style={[
+                      styles.mainStatus,
+                      trip.status === 'Đã ghép nối'
+                        ? styles.mainStatusSuccess
+                        : styles.mainStatusPending,
+                    ]}>
+                    {trip.status}
                   </Text>
-                  <Text
-                    style={styles.tripPlace}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {trip.to}
-                  </Text>
+                  <View style={styles.mainLeftPart}>
+                    <Text style={styles.mainDate}>{trip.date}</Text>
+                    <Text style={styles.mainTime}>{trip.time}</Text>
+                  </View>
+                  <View style={styles.mainMiddlePart}>
+                    <Text style={styles.mainPlace} numberOfLines={1} ellipsizeMode="tail">
+                      {trip.from}
+                    </Text>
+                    <Text style={styles.mainPlace} numberOfLines={1} ellipsizeMode="tail">
+                      {trip.to}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </ScrollView>
           </View>
         </View>
+
         <View style={styles.favoriteHeader}>
           <Text style={styles.tripTitle}>Điểm đến yêu thích</Text>
           <TouchableOpacity>
@@ -285,6 +274,7 @@ export default function HomeScreen() {
             />
           </TouchableOpacity>
         </View>
+        
         {[
           {
             icon: require("../assets/icon-location.png"),
@@ -373,8 +363,6 @@ const styles = StyleSheet.create({
     gap: 20,
     marginBottom: 20,
   },
-
-  // Styles cho khung animation mới
   animatedFrame: {
     flex: 1,
     height: 150,
@@ -414,8 +402,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333333",
   },
-
-  // --- Chuyến đi sắp tới ---
   tripSection: {
     flexDirection: "row",
     paddingHorizontal: 20,
@@ -441,7 +427,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 12,
     padding: 8,
-   
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -493,9 +478,6 @@ const styles = StyleSheet.create({
     color: "#222",
     flex: 1,
     marginRight: 6,
-    overflow: "hidden",
-    numberOfLines: 1,
-    ellipsizeMode: "tail",
   },
   favoriteEditIcon: {
     width: 16,
@@ -503,74 +485,72 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     marginTop: 2,
   },
-  leftColumn: {
-    flex: 6,
-    // alignItems: "center",
-  },
   tripTitle: {
     fontSize: 24,
     fontWeight: "700",
     color: "#2C3E50",
     marginBottom: 8,
   },
-  calendarImage: {
-    width: "100%",
-    resizeMode: "contain",
+  mainContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
   },
-  linkText: {
-    fontSize: 13,
-    color: "#4285F4",
-    textDecorationLine: "underline",
-    marginTop: 4,
+  mainLeft: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
   },
-  rightColumn: {
-    flex: 5,
-    gap: 4,
+  mainCalendarImage: {
+   contentFit: "contain",
   },
-  tripCard: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 12,
+  mainRight: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    paddingVertical: 16,
+  },
+  mainTripCard: {
+    flexDirection: 'row',
     borderWidth: 1,
-    borderColor: "#D8E6F3",
-    padding: 8,
-    justifyContent: "space-between",
-    alignItems: "center",
+    borderColor: '#ccc',
+    borderRadius: 12,
+    padding: 6,
+    marginBottom: 6,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  tripTime: {
-    flex: 3,
-    alignItems: "center",
+  mainLeftPart: {
+    alignItems: 'center',
+    marginRight: 10,
   },
-  tripDate: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2C3E50",
+  mainDate: {
+    fontWeight: '700',
+    fontSize: 13,
+    marginBottom: 4,
   },
-  tripHour: {
-    fontSize: 12,
-    color: "#7F8C8D",
-    marginTop: 4,
+  mainTime: {
+    fontSize: 13,
+    color: '#444',
   },
-  tripDetail: {
-    flex: 7,
-    paddingLeft: 12,
+  mainMiddlePart: {
+    flex: 1,
+    marginHorizontal: 8,
   },
-  tripPlace: {
-    fontSize: 12,
-    color: "#2C3E50",
+  mainPlace: {
+    fontSize: 13,
+    color: '#333',
   },
-  tripStatus: {
-    marginTop: 4,
+  mainStatus: {
     fontSize: 10,
-    position: "absolute",
-    right: 10,
-    top: 0,
-    fontWeight: "600",
+    fontWeight: '600',
+    position: 'absolute',
+    right: 4,
+    top: 2,
   },
-  statusSuccess: {
-    color: "#2ECC71",
+  mainStatusSuccess: {
+    color: '#28a745',
   },
-  statusPending: {
-    color: "#E74C3C",
+  mainStatusPending: {
+    color: '#dc3545',
   },
 });

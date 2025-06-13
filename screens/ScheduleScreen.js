@@ -69,7 +69,7 @@ const trips = {
 const ScheduleScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.header}></Text>
         {Object.entries(trips).map(([date, tripList]) => (
           <View key={date} style={styles.section}>

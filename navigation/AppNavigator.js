@@ -21,6 +21,17 @@ import LoadingAuthScreen from "../screens/auth/LoadingAuthScreen"; // Auth loadi
 import ScheduleScreen from "../screens/ScheduleScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import SettingsScreen from "../screens/SettingScreen";
+import LanguageScreen from "../screens/LanguageScreen";
+import NotificationSettings from "../screens/NotificationSettings";
+import PrivacySettings from "../screens/PrivacySettings";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
+import RewardsScreen from "../screens/RewardsScreen";
+import HelpCenterScreen from "../screens/HelpCenterScreen";
+import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
+import DeleteAccountScreen from "../screens/DeleteAccountScreen";
+import PaymentScreen from "../screens/PaymentScreen";
+import ProfileDetailScreen from "../screens/ProfileDetailScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -118,7 +129,62 @@ const ProfileStack = () => {
       <Stack.Screen
         name="ProfileMain"
         component={ProfileScreen}
-        options={{ title: "Cá nhân" }}
+        options={{ title: "Cá nhân", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Setting"
+        component={SettingsScreen}
+        options={{ title: "Cài đặt", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Language"
+        component={LanguageScreen}
+        options={{ title: "Ngôn ngữ", headerShown: false }}
+      />
+      <Stack.Screen
+        name="NotificationSettings"
+        component={NotificationSettings}
+        options={{ title: "Thông báo", headerShown: false }}
+      />
+      <Stack.Screen
+        name="PrivacySettings"
+        component={PrivacySettings}
+        options={{ title: "Riêng tư", headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: "Đổi mật khẩu", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Rewards"
+        component={RewardsScreen}
+        options={{ title: "Thưởng", headerShown: false }}
+      />
+      <Stack.Screen
+        name="HelpCenter"
+        component={HelpCenterScreen}
+        options={{ title: "Trung tâm hỗ trợ", headerShown: false }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: "Quyền riêng tư", headerShown: false }}
+      />
+      <Stack.Screen
+        name="DeleteAccount"
+        component={DeleteAccountScreen}
+        options={{ title: "Xóa tài khoản", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Payment"
+        component={PaymentScreen}
+        options={{ title: "Thanh toán", headerShown: false }}
+      />
+      <Stack.Screen
+        name="ProfileDetail"
+        component={ProfileDetailScreen}
+        options={{ title: "Chi tiết", headerShown: false }}
       />
     </Stack.Navigator>
   );
