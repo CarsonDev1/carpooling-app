@@ -32,6 +32,7 @@ import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import DeleteAccountScreen from "../screens/DeleteAccountScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import ProfileDetailScreen from "../screens/ProfileDetailScreen";
+import LocationScreen from "../screens/LocationScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -107,6 +108,11 @@ const HomeStack = () => {
           headerShown: false,
           title: "Đang tải...",
         }}
+      />
+      <Stack.Screen
+        name="Location"
+        component={LocationScreen}
+        options={{ title: "Địa điểm", headerShown: false }}
       />
     </Stack.Navigator>
   );

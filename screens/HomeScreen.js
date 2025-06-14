@@ -22,25 +22,25 @@ const { width: screenWidth } = Dimensions.get("window");
 
 const trips = [
   {
-    date: '24/6',
-    time: '08:30',
-    from: 'Nhà',
-    to: '27 Đường Láng, Ba...',
-    status: 'Đã ghép nối',
+    date: "24/6",
+    time: "08:30",
+    from: "Nhà",
+    to: "27 Đường Láng, Ba...",
+    status: "Đã ghép nối",
   },
   {
-    date: '24/6',
-    time: '13:30',
-    from: '27 Đường Láng, Ba...',
-    to: 'Nhà',
-    status: 'Đã ghép nối',
+    date: "24/6",
+    time: "13:30",
+    from: "27 Đường Láng, Ba...",
+    to: "Nhà",
+    status: "Đã ghép nối",
   },
   {
-    date: '24/6',
-    time: '17:30',
-    from: 'Nhà',
-    to: '231 Thái Hà, Đống...',
-    status: 'Chưa ghép nối',
+    date: "24/6",
+    time: "17:30",
+    from: "Nhà",
+    to: "231 Thái Hà, Đống...",
+    status: "Chưa ghép nối",
   },
 ];
 
@@ -112,8 +112,13 @@ const AnimatedCloud = ({ delay = 0, speed, size, top }) => {
 
 // Component khung hành khách
 const PassengerFrame = () => {
+  const navigation = useNavigation();
+
   return (
-    <View style={styles.animatedFrame}>
+    <TouchableOpacity
+      style={styles.animatedFrame}
+      onPress={() => navigation.navigate("Location")}
+    >
       <AnimatedCloud initialPosition={-40} speed={9000} size={25} top={10} />
       <AnimatedCloud initialPosition={-60} speed={10000} size={20} top={25} />
       <AnimatedCloud initialPosition={-80} speed={11000} size={22} top={40} />
@@ -125,7 +130,7 @@ const PassengerFrame = () => {
       <View style={styles.titleContainer}>
         <Text style={styles.frameTitle}>Hành khách</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -218,16 +223,16 @@ export default function HomeScreen() {
           <PassengerFrame />
           <DriverFrame />
         </View>
-        
+
         <View style={styles.tripSection}>
           <Text style={styles.tripTitle}>Chuyến đi sắp tới</Text>
         </View>
-        
+
         <View style={styles.mainContainer}>
           <View style={styles.mainLeft}>
-            <TouchableOpacity onPress={() => navigation.navigate('Schedule')}>
+            <TouchableOpacity onPress={() => navigation.navigate("Schedule")}>
               <Image
-                source={require('../assets/img-view-schedule-main.png')}
+                source={require("../assets/img-view-schedule-main.png")}
                 style={styles.mainCalendarImage}
                 resizeMode="contain"
               />
@@ -241,10 +246,11 @@ export default function HomeScreen() {
                   <Text
                     style={[
                       styles.mainStatus,
-                      trip.status === 'Đã ghép nối'
+                      trip.status === "Đã ghép nối"
                         ? styles.mainStatusSuccess
                         : styles.mainStatusPending,
-                    ]}>
+                    ]}
+                  >
                     {trip.status}
                   </Text>
                   <View style={styles.mainLeftPart}>
@@ -252,10 +258,18 @@ export default function HomeScreen() {
                     <Text style={styles.mainTime}>{trip.time}</Text>
                   </View>
                   <View style={styles.mainMiddlePart}>
-                    <Text style={styles.mainPlace} numberOfLines={1} ellipsizeMode="tail">
+                    <Text
+                      style={styles.mainPlace}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {trip.from}
                     </Text>
-                    <Text style={styles.mainPlace} numberOfLines={1} ellipsizeMode="tail">
+                    <Text
+                      style={styles.mainPlace}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {trip.to}
                     </Text>
                   </View>
@@ -274,7 +288,7 @@ export default function HomeScreen() {
             />
           </TouchableOpacity>
         </View>
-        
+
         {[
           {
             icon: require("../assets/icon-location.png"),
@@ -492,45 +506,45 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   mainContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 16,
   },
   mainLeft: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 16,
   },
   mainCalendarImage: {
-   contentFit: "contain",
+    contentFit: "contain",
   },
   mainRight: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
     paddingVertical: 16,
   },
   mainTripCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 12,
     padding: 6,
     marginBottom: 6,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   mainLeftPart: {
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: 10,
   },
   mainDate: {
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 13,
     marginBottom: 4,
   },
   mainTime: {
     fontSize: 13,
-    color: '#444',
+    color: "#444",
   },
   mainMiddlePart: {
     flex: 1,
@@ -538,19 +552,19 @@ const styles = StyleSheet.create({
   },
   mainPlace: {
     fontSize: 13,
-    color: '#333',
+    color: "#333",
   },
   mainStatus: {
     fontSize: 10,
-    fontWeight: '600',
-    position: 'absolute',
+    fontWeight: "600",
+    position: "absolute",
     right: 4,
     top: 2,
   },
   mainStatusSuccess: {
-    color: '#28a745',
+    color: "#28a745",
   },
   mainStatusPending: {
-    color: '#dc3545',
+    color: "#dc3545",
   },
 });
