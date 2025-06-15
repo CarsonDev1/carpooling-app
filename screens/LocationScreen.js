@@ -9,12 +9,40 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
   Pressable,
   Animated,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useNavigation } from "@react-navigation/native";
 
+const recentTrips = [
+  [
+    "24 Chùa Láng, P. Láng Thượng, Đống Đa, Hà Nội",
+    "46 Nguyễn Trường Tộ, Trúc Bạch, Ba Đình, Hà Nội",
+  ],
+  [
+    "53 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
+    "168 Lương Định Của, Kim Liên, Đống Đa, Hà Nội",
+  ],
+  [
+    "168 Lương Định Của, Kim Liên, Đống Đa, Hà Nội",
+    "53 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
+  ],
+  [
+    "24 Chùa Láng, P. Láng Thượng, Đống Đa, Hà Nội",
+    "46 Nguyễn Trường Tộ, Trúc Bạch, Ba Đình, Hà Nội",
+  ],
+  [
+    "53 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
+    "168 Lương Định Của, Kim Liên, Đống Đa, Hà Nội",
+  ],
+  [
+    "168 Lương Định Của, Kim Liên, Đống Đa, Hà Nội",
+    "53 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
+  ],
+];
 export default function LocationScreen() {
   const [showPopup, setShowPopup] = useState(false);
   const [fromLocation, setFromLocation] = useState("");
@@ -27,7 +55,7 @@ export default function LocationScreen() {
   const [dailyChecked, setDailyChecked] = useState(false);
   const [swapped, setSwapped] = useState(false);
   const animValue = useRef(new Animated.Value(0)).current;
-
+  const navigation = useNavigation();
   const input1Translate = animValue.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 56],
@@ -140,15 +168,35 @@ export default function LocationScreen() {
             )}
           </View>
 
-          <View style={styles.quickTags}>
-            {["Nhà", "Công ty", "Trường học", "Thêm địa chỉ"].map((label) => (
-              <TouchableOpacity key={label} style={styles.tag}>
+          {/* Quick Tags horizontal scroll */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 12, marginBottom: 12 }}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {[
+              "Nhà",
+              "Công ty",
+              "Trường học",
+              "Thêm địa chỉ",
+              "Thêm địa chỉ 1",
+              "Thêm địa chỉ 2",
+              "Thêm địa chỉ 3",
+            ].map((label) => (
+              <TouchableOpacity
+                key={label}
+                style={styles.tag}
+                onPress={() => {
+                  navigation.navigate("SimilarTrips");
+                }}
+              >
                 <Text>{label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
-          <View style={styles.timeRowAligned}>
+          {/* <View style={styles.timeRowAligned}>
             <Text style={styles.timeLabel}>Giờ khởi hành</Text>
             <View style={styles.timeSection}>
               <TouchableOpacity
@@ -189,10 +237,24 @@ export default function LocationScreen() {
               />
             </TouchableOpacity>
             <Text style={styles.dailyText}>Đặt làm lộ trình hàng ngày</Text>
-          </View>
+          </View> */}
+        </View>
+        <View style={styles.recentSection}>
+          <Text style={styles.recentTitle}>Gần đây</Text>
+          {recentTrips.map((trip, index) => (
+            <View key={index} style={styles.recentCard}>
+              <Image
+                source={require("../assets/ic-doc.png")}
+                style={styles.dotIcon}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recentText}>{trip[0]}</Text>
+                <Text style={styles.recentText}>{trip[1]}</Text>
+              </View>
+            </View>
+          ))}
         </View>
       </ScrollView>
-
       {showTimePicker && (
         <DateTimePicker
           value={selectedTime}
@@ -319,8 +381,9 @@ const styles = StyleSheet.create({
   },
   checkboxWhite: {
     borderRadius: 4,
+    marginBottom: 10,
   },
-  dailyText: { marginLeft: 6 },
+  dailyText: { marginLeft: 6, marginBottom: 10 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "#00000055",
@@ -350,5 +413,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     borderRadius: 8,
     marginTop: 20,
+  },
+  recentSection: {
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  recentTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  recentCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dotIcon: {
+    width: 20,
+    height: 40,
+    resizeMode: "contain",
+    marginRight: 10,
+    alignSelf: "center",
+  },
+  recentText: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 4,
   },
 });

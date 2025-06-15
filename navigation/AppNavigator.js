@@ -33,6 +33,10 @@ import DeleteAccountScreen from "../screens/DeleteAccountScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import ProfileDetailScreen from "../screens/ProfileDetailScreen";
 import LocationScreen from "../screens/LocationScreen";
+import SimilarTripsScreen from "../screens/SimilarTripsScreen";
+import WaitingMatchScreen from "../screens/WaitingMatchScreen";
+import TripDetailScreen from "../screens/TripDetailScreen";
+import TripInProgressScreen from "../screens/TripInProgressScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -113,6 +117,26 @@ const HomeStack = () => {
         name="Location"
         component={LocationScreen}
         options={{ title: "Địa điểm", headerShown: false }}
+      />
+      <Stack.Screen
+        name="SimilarTrips"
+        component={SimilarTripsScreen}
+        options={{ title: "Lộ trình tương tự", headerShown: false }}
+      />
+      <Stack.Screen
+        name="WaitingMatch"
+        component={WaitingMatchScreen}
+        options={{ title: "Đang chờ", headerShown: false }}
+      />
+      <Stack.Screen
+        name="TripDetail"
+        component={TripDetailScreen}
+        options={{ title: "Chi tiết lộ trình", headerShown: false }}
+      />
+      <Stack.Screen
+        name="TripInProgress"
+        component={TripInProgressScreen}
+        options={{ title: "Đang di chuyển", headerShown: false }}
       />
     </Stack.Navigator>
   );
