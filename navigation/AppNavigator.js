@@ -32,11 +32,15 @@ import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import DeleteAccountScreen from "../screens/DeleteAccountScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import ProfileDetailScreen from "../screens/ProfileDetailScreen";
-import LocationScreen from "../screens/LocationScreen";
 import SimilarTripsScreen from "../screens/SimilarTripsScreen";
 import WaitingMatchScreen from "../screens/WaitingMatchScreen";
 import TripDetailScreen from "../screens/TripDetailScreen";
 import TripInProgressScreen from "../screens/TripInProgressScreen";
+import CreateTripScreen from "../screens/CreateTripScreen";
+import WaitingForDriverScreen from "../screens/WaitingForDriverScreen";
+import DriverRegistrationScreen from "../screens/DriverRegistrationScreen";
+import DriverRequestsScreen from "../screens/DriverRequestsScreen";
+import PaymentSuccessScreen from "../screens/PaymentSuccessScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -114,9 +118,9 @@ const HomeStack = () => {
         }}
       />
       <Stack.Screen
-        name="Location"
-        component={LocationScreen}
-        options={{ title: "Địa điểm", headerShown: false }}
+        name="CreateTrip"
+        component={CreateTripScreen}
+        options={{ title: "Tạo chuyến đi", headerShown: false }}
       />
       <Stack.Screen
         name="SimilarTrips"
@@ -137,6 +141,27 @@ const HomeStack = () => {
         name="TripInProgress"
         component={TripInProgressScreen}
         options={{ title: "Đang di chuyển", headerShown: false }}
+      />
+     
+      <Stack.Screen
+        name="WaitingForDriver"
+        component={WaitingForDriverScreen}
+        options={{ title: "Chờ tài xế", headerShown: false }}
+      />
+      <Stack.Screen
+        name="DriverRegistration"
+        component={DriverRegistrationScreen}
+        options={{ title: "Đăng ký tài xế", headerShown: false }}
+      />
+      <Stack.Screen
+        name="DriverRequests"
+        component={DriverRequestsScreen}
+        options={{ title: "Yêu cầu chuyến đi", headerShown: false }}
+      />
+      <Stack.Screen
+        name="PaymentSuccess"
+        component={PaymentSuccessScreen}
+        options={{ title: "Thanh toán thành công", headerShown: false }}
       />
     </Stack.Navigator>
   );

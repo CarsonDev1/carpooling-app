@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";1
 import {
   View,
   Text,
@@ -6,55 +6,133 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from "react-native";
-
-const messages = [
-  {
-    name: "Trần Tiến Đạt",
-    message: "Bạn ơi mình đến rồi nhé",
-    time: "Th3 14:25",
-    unread: true,
-    avatar: "https://i.pravatar.cc/50?img=1",
-  },
-  {
-    name: "Phạm Hoàng Minh Khôi",
-    message: "Cảm ơn bạn nhiều nhé",
-    time: "Th3 14:25",
-    unread: false,
-    avatar: "https://i.pravatar.cc/50?img=2",
-  },
-  {
-    name: "Hứa Quang Hán",
-    message: "Bạn: Okeee",
-    time: "Th3 14:25",
-    unread: false,
-    avatar: "https://i.pravatar.cc/50?img=3",
-  },
-  {
-    name: "Bạch Kính Đình",
-    message: "ok nha",
-    time: "Th3 14:25",
-    unread: false,
-    avatar: "https://i.pravatar.cc/50?img=4",
-  },
-];
-
-const notifications = [
-  "Đã tìm thấy đối tác cho chuyến đi từ 129 Phạm Ngọc Thạch vào 14:50 21/2/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 100 Nguyễn Kiệm vào 5:45 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 23 Lương Định Của vào 6:20 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 55 Trần Hưng Đạo vào 6:50 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 32 Trương Định 7:20 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 23 Hoàng Hoa Thám vào 7:40 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ Số 8 Nguyễn Xiển vào 8:12 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 98 Lê Quang Định vào 9:20 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 99 Phạm Ngũ Lão vào 17:20 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ Số 1 Phạm Văn Đồng vào 21:20 24/1/2025",
-  "Đã tìm thấy đối tác cho chuyến đi từ 100/5 Nguyễn Kiệm vào 22:20 24/1/2025",
-];
+import { useNavigation } from "@react-navigation/native";
+import { getNotifications, markNotificationAsRead, getChats } from "../api/notificationsApi";
+import { Ionicons } from "@expo/vector-icons";
 
 const NotificationsScreen = () => {
-  const [tab, setTab] = useState("messages"); // 'messages' or 'notifications'
+  const navigation = useNavigation();
+  const [tab, setTab] = useState("notifications"); // 'messages' or 'notifications'
+  const [notifications, setNotifications] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [tab]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      if (tab === "notifications") {
+        await loadNotifications();
+      } else {
+        await loadChats();
+      }
+    } catch (error) {
+      console.error("Load data error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadNotifications = async () => {
+    try {
+      const response = await getNotifications({ limit: 30 });
+      if (response.success) {
+        setNotifications(response.data || []);
+      }
+    } catch (error) {
+      console.error("Load notifications error:", error);
+      // Fallback to empty array on error
+      setNotifications([]);
+    }
+  };
+
+  const loadChats = async () => {
+    try {
+      const response = await getChats({ limit: 20 });
+      if (response.success) {
+        setChats(response.data || []);
+      }
+    } catch (error) {
+      console.error("Load chats error:", error);
+      // Fallback to empty array on error
+      setChats([]);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const handleNotificationPress = async (notification) => {
+    try {
+      if (!notification.isRead) {
+        await markNotificationAsRead(notification._id);
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => 
+            n._id === notification._id ? { ...n, isRead: true } : n
+          )
+        );
+      }
+
+      // Navigate based on notification type
+      if (notification.relatedTrip) {
+        navigation.navigate("TripDetail", { tripId: notification.relatedTrip });
+      }
+    } catch (error) {
+      console.error("Handle notification error:", error);
+    }
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+      return date.toLocaleTimeString('vi-VN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } else if (days === 1) {
+      return "Hôm qua";
+    } else if (days < 7) {
+      return `${days} ngày trước`;
+    } else {
+      return date.toLocaleDateString('vi-VN');
+    }
+  };
+
+  const renderEmptyState = (type) => (
+    <View style={styles.emptyContainer}>
+      <Ionicons 
+        name={type === "notifications" ? "notifications-outline" : "chatbubble-outline"} 
+        size={48} 
+        color="#ccc" 
+      />
+      <Text style={styles.emptyText}>
+        {type === "notifications" ? "Chưa có thông báo nào" : "Chưa có tin nhắn nào"}
+      </Text>
+    </View>
+  );
+
+  const renderLoadingState = () => (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#4285F4" />
+      <Text style={styles.loadingText}>Đang tải...</Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -88,34 +166,87 @@ const NotificationsScreen = () => {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.contentBox} showsVerticalScrollIndicator={false}>
-        {tab === "messages" &&
-          messages.map((item, index) => (
-            <View key={index} style={styles.messageItem}>
-              <Image source={{ uri: item.avatar }} style={styles.avatar} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.message}>{item.message}</Text>
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={styles.time}>{item.time}</Text>
-                {item.unread && <View style={styles.dot} />}
-              </View>
-            </View>
-          ))}
+      <ScrollView 
+        style={styles.contentBox} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {loading ? renderLoadingState() : (
+          <>
+            {tab === "messages" && (
+              <>
+                {chats.length === 0 ? renderEmptyState("messages") : (
+                  chats.map((chat, index) => (
+                    <TouchableOpacity 
+                      key={chat._id || index} 
+                      style={styles.messageItem}
+                      onPress={() => navigation.navigate("Chat", { chatId: chat._id })}
+                    >
+                      <View style={styles.avatar}>
+                        {chat.otherUser?.avatar ? (
+                          <Image source={{ uri: chat.otherUser.avatar }} style={styles.avatarImage} />
+                        ) : (
+                          <Ionicons name="person" size={20} color="#666" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={styles.name}>
+                          {chat.otherUser?.fullName || "Người dùng"}
+                        </Text>
+                        <Text style={styles.message} numberOfLines={1}>
+                          {chat.lastMessage?.message || "Chưa có tin nhắn"}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={styles.time}>
+                          {chat.lastMessage?.createdAt ? formatDateTime(chat.lastMessage.createdAt) : ""}
+                        </Text>
+                        {chat.unreadCount > 0 && (
+                          <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadCount}>{chat.unreadCount}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </>
+            )}
 
-        {tab === "notifications" &&
-         notifications.map((text, index) => (
-          <View
-            key={index}
-            style={[
-              styles.notificationItem,
-              index < notifications.length - 1 && styles.notificationItemBorder,
-            ]}>
-            <Text style={styles.notificationText}>{text}</Text>
-            <View style={styles.dotOverlay} />
-          </View>
-        ))}
+            {tab === "notifications" && (
+              <>
+                {notifications.length === 0 ? renderEmptyState("notifications") : (
+                  notifications.map((notification, index) => (
+                    <TouchableOpacity
+                      key={notification._id || index}
+                      style={[
+                        styles.notificationItem,
+                        !notification.isRead && styles.unreadNotification,
+                        index < notifications.length - 1 && styles.notificationItemBorder,
+                      ]}
+                      onPress={() => handleNotificationPress(notification)}
+                    >
+                      <View style={styles.notificationContent}>
+                        <Text style={[
+                          styles.notificationText,
+                          !notification.isRead && styles.unreadText
+                        ]}>
+                          {notification.message || notification.title}
+                        </Text>
+                        <Text style={styles.notificationTime}>
+                          {formatDateTime(notification.createdAt)}
+                        </Text>
+                      </View>
+                      {!notification.isRead && <View style={styles.dotOverlay} />}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -174,6 +305,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   name: {
     fontWeight: "600",
@@ -220,6 +359,58 @@ const styles = StyleSheet.create({
     top: "50%",
     right: 0,
     marginTop: -4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 50,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 50,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+  },
+  unreadBadge: {
+    backgroundColor: "red",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  unreadCount: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  unreadNotification: {
+    backgroundColor: "#f0f8ff",
+  },
+  unreadText: {
+    fontWeight: "600",
+  },
+  notificationContent: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 4,
   },
 });
 

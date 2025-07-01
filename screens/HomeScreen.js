@@ -16,33 +16,12 @@ import {
 import { getCurrentUser } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
+import { getMyJoinedTrips, getMyTrips } from "../api/tripsApi";
 
 // Sau đó mới có các constants và components
 const { width: screenWidth } = Dimensions.get("window");
 
-const trips = [
-  {
-    date: "24/6",
-    time: "08:30",
-    from: "Nhà",
-    to: "27 Đường Láng, Ba...",
-    status: "Đã ghép nối",
-  },
-  {
-    date: "24/6",
-    time: "13:30",
-    from: "27 Đường Láng, Ba...",
-    to: "Nhà",
-    status: "Đã ghép nối",
-  },
-  {
-    date: "24/6",
-    time: "17:30",
-    from: "Nhà",
-    to: "231 Thái Hà, Đống...",
-    status: "Chưa ghép nối",
-  },
-];
+// Remove static trips data - will be loaded from API
 
 // Component đám mây
 const CloudComponent = ({ size = 30, style }) => (
@@ -117,7 +96,7 @@ const PassengerFrame = () => {
   return (
     <TouchableOpacity
       style={styles.animatedFrame}
-      onPress={() => navigation.navigate("Location")}
+      onPress={() => navigation.navigate("CreateTrip")}
     >
       <AnimatedCloud initialPosition={-40} speed={9000} size={25} top={10} />
       <AnimatedCloud initialPosition={-60} speed={10000} size={20} top={25} />
@@ -136,8 +115,32 @@ const PassengerFrame = () => {
 
 // Component khung tài xế
 const DriverFrame = () => {
+  const navigation = useNavigation();
+  const { user } = useAuth();
+
+  const handleDriverPress = () => {
+    // Check if user is already a driver
+    const isDriver = user?.role === 'driver' || user?.role === 'both';
+    
+    if (isDriver) {
+      // Navigate to requests screen for drivers
+      navigation.navigate("DriverRequests");
+    } else {
+      // Navigate to driver registration
+      navigation.navigate("DriverRegistration");
+    }
+  };
+
+  const getDriverTitle = () => {
+    const isDriver = user?.role === 'driver' || user?.role === 'both';
+    return isDriver ? "Xem yêu cầu" : "Làm tài xế";
+  };
+
   return (
-    <View style={styles.animatedFrame}>
+    <TouchableOpacity
+      style={styles.animatedFrame}
+      onPress={handleDriverPress}
+    >
       <AnimatedCloud initialPosition={-50} speed={7500} size={24} top={12} />
       <AnimatedCloud initialPosition={-70} speed={9000} size={18} top={30} />
       <AnimatedCloud initialPosition={-90} speed={6500} size={26} top={45} />
@@ -147,20 +150,23 @@ const DriverFrame = () => {
       </View>
 
       <View style={styles.titleContainer}>
-        <Text style={styles.frameTitle}>Tài xế</Text>
+        <Text style={styles.frameTitle}>{getDriverTitle()}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
+  const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [tripsLoading, setTripsLoading] = useState(false);
   const { logout } = useAuth();
   const navigation = useNavigation();
 
   useEffect(() => {
     fetchUserData();
+    fetchUpcomingTrips();
   }, []);
 
   const fetchUserData = async () => {
@@ -176,6 +182,84 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUpcomingTrips = async () => {
+    try {
+      setTripsLoading(true);
+      
+      // Get both my trips (as driver) and joined trips (as passenger)
+      const [myTripsResponse, joinedTripsResponse] = await Promise.all([
+        getMyTrips({ 
+          status: 'scheduled',
+          fromDate: new Date().toISOString(),
+          limit: 5
+        }).catch(() => ({ data: [] })),
+        getMyJoinedTrips({ 
+          status: 'scheduled',
+          fromDate: new Date().toISOString(),
+          limit: 5
+        }).catch(() => ({ data: [] }))
+      ]);
+
+      // Combine and format trips
+      const allTrips = [
+        ...(myTripsResponse.data || []).map(trip => ({ ...trip, role: 'driver' })),
+        ...(joinedTripsResponse.data || []).map(trip => ({ ...trip, role: 'passenger' }))
+      ];
+
+      // Sort by departure time and take only first 3
+      const sortedTrips = allTrips
+        .sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime))
+        .slice(0, 3)
+        .map(trip => formatTripForDisplay(trip));
+
+      setUpcomingTrips(sortedTrips);
+    } catch (error) {
+      console.error("Error fetching trips:", error);
+      // Don't show error to user, just keep empty array
+    } finally {
+      setTripsLoading(false);
+    }
+  };
+
+  const formatTripForDisplay = (trip) => {
+    const departureDate = new Date(trip.departureTime);
+    const formattedDate = `${departureDate.getDate()}/${departureDate.getMonth() + 1}`;
+    const formattedTime = departureDate.toLocaleTimeString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+
+    // Truncate long addresses
+    const truncateAddress = (address, maxLength = 20) => {
+      if (!address) return "";
+      return address.length > maxLength ? 
+        address.substring(0, maxLength) + "..." : 
+        address;
+    };
+
+    // Determine status based on trip data
+    let status = "Chưa ghép nối";
+    if (trip.role === 'driver') {
+      const acceptedPassengers = trip.passengers?.filter(p => p.status === 'accepted') || [];
+      status = acceptedPassengers.length > 0 ? "Đã ghép nối" : "Chưa ghép nối";
+    } else {
+      // For passenger, check if accepted
+      const myPassengerRecord = trip.passengers?.find(p => p.user === userData?._id);
+      status = myPassengerRecord?.status === 'accepted' ? "Đã ghép nối" : "Đang chờ xác nhận";
+    }
+
+    return {
+      id: trip._id,
+      date: formattedDate,
+      time: formattedTime,
+      from: truncateAddress(trip.startLocation?.address),
+      to: truncateAddress(trip.endLocation?.address),
+      status,
+      role: trip.role,
+      fullTrip: trip
+    };
   };
 
   const handleLogout = async () => {
@@ -241,40 +325,68 @@ export default function HomeScreen() {
 
           <View style={styles.mainRight}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {trips.map((trip, index) => (
-                <View key={index} style={styles.mainTripCard}>
-                  <Text
-                    style={[
-                      styles.mainStatus,
-                      trip.status === "Đã ghép nối"
-                        ? styles.mainStatusSuccess
-                        : styles.mainStatusPending,
-                    ]}
-                  >
-                    {trip.status}
-                  </Text>
-                  <View style={styles.mainLeftPart}>
-                    <Text style={styles.mainDate}>{trip.date}</Text>
-                    <Text style={styles.mainTime}>{trip.time}</Text>
-                  </View>
-                  <View style={styles.mainMiddlePart}>
-                    <Text
-                      style={styles.mainPlace}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {trip.from}
-                    </Text>
-                    <Text
-                      style={styles.mainPlace}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {trip.to}
-                    </Text>
-                  </View>
+              {tripsLoading ? (
+                <View style={styles.loadingTrips}>
+                  <ActivityIndicator color="#4285F4" size="small" />
+                  <Text style={styles.loadingTripsText}>Đang tải chuyến đi...</Text>
                 </View>
-              ))}
+              ) : upcomingTrips.length > 0 ? (
+                upcomingTrips.map((trip, index) => (
+                  <TouchableOpacity
+                    key={trip.id || index}
+                    style={styles.mainTripCard}
+                    onPress={() => navigation.navigate("TripDetail", { tripId: trip.id })}
+                  >
+                    <Text
+                      style={[
+                        styles.mainStatus,
+                        trip.status === "Đã ghép nối"
+                          ? styles.mainStatusSuccess
+                          : trip.status === "Đang chờ xác nhận"
+                          ? styles.mainStatusPending
+                          : styles.mainStatusDefault,
+                      ]}
+                    >
+                      {trip.status}
+                    </Text>
+                    <View style={styles.mainLeftPart}>
+                      <Text style={styles.mainDate}>{trip.date}</Text>
+                      <Text style={styles.mainTime}>{trip.time}</Text>
+                    </View>
+                    <View style={styles.mainMiddlePart}>
+                      <Text
+                        style={styles.mainPlace}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {trip.from}
+                      </Text>
+                      <Text
+                        style={styles.mainPlace}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {trip.to}
+                      </Text>
+                    </View>
+                    <View style={styles.roleIndicator}>
+                      <Text style={styles.roleText}>
+                        {trip.role === 'driver' ? '🚗 Tài xế' : '👤 Hành khách'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noTrips}>
+                  <Text style={styles.noTripsText}>Chưa có chuyến đi nào</Text>
+                  <TouchableOpacity
+                    style={styles.createTripButton}
+                    onPress={() => navigation.navigate("CreateTrip")}
+                  >
+                    <Text style={styles.createTripButtonText}>Tạo chuyến đi</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -498,6 +610,50 @@ const styles = StyleSheet.create({
     height: 16,
     resizeMode: "contain",
     marginTop: 2,
+  },
+  loadingTrips: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  loadingTripsText: {
+    marginLeft: 8,
+    color: "#666",
+    fontSize: 14,
+  },
+  noTrips: {
+    alignItems: "center",
+    padding: 20,
+  },
+  noTripsText: {
+    color: "#666",
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  createTripButton: {
+    backgroundColor: "#4285F4",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  createTripButtonText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  roleIndicator: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+  },
+  roleText: {
+    fontSize: 10,
+    color: "#666",
+  },
+  mainStatusDefault: {
+    backgroundColor: "#E0E0E0",
+    color: "#666",
   },
   tripTitle: {
     fontSize: 24,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,182 +6,190 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from "react-native";
-
-const passengerData = [
-  {
-    from: "129 Phạm Ngọc Thạch, Đống Đa",
-    to: "77 Hào Nam, Ô Chợ Dừa, Đống Đa,...",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "20.000",
-  },
-  {
-    from: "Ngõ 38, Đan Phượng, Phượng Trì,...",
-    to: "Số 6 Đào Duy Anh, Hà Nội",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "35.000",
-  },
-  {
-    from: "10 Võ Văn Kiệt, TP. Hồ Chí Minh",
-    to: "Đại học FPT Khu Công Nghệ Cao",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "120.000",
-  },
-  {
-    from: "8 Trần Hưng Đạo, Đà Lạt",
-    to: "55 Hoàng Hoa Thám, Đà Lạt",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "97.000",
-  },
-  {
-    from: "15 Lý Tự Trọng, Nha Trang",
-    to: "77 Nguyễn Văn Cừ, Nha Trang",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "89.000",
-  },
-  {
-    from: "Số 26 Quang Trung, Hoàn Kiếm",
-    to: "Số 17 Lý Nam Đế, Hoàn Kiếm",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "78.000",
-  },
-  {
-    from: "Số 10 Cầu Gỗ, Hoàn Kiếm",
-    to: "Số 29 Lý Thường Kiệt, Hoàn Kiếm",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "65.000",
-  },
-  {
-    from: "Số 15 Trần Quang Khải, Hoàn Kiếm",
-    to: "Số 31 Nguyễn Thái Học, Ba Đình",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "87.000",
-  },
-  {
-    from: "Số 88 Tràng Tiền, Hoàn Kiếm",
-    to: "Số 88 Tràng Tiền, Hoàn Kiếm",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "35.000",
-  },
-];
-
-const driverData = [
-  {
-    from: "129 Phạm Ngọc Thạch, Đống Đa",
-    to: "77 Hào Nam, Ô Chợ Dừa, Đống Đa,...",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "12.000",
-  },
-  {
-    from: "Ngõ 38, Đan Phượng, Phượng Trì,...",
-    to: "Số 6 Đào Duy Anh, Hà Nội",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "29.000",
-  },
-  {
-    from: "10 Võ Văn Kiệt, TP. Hồ Chí Minh",
-    to: "Đại học FPT Khu Công Nghệ Cao",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "98.000",
-  },
-  {
-    from: "8 Trần Hưng Đạo, Đà Lạt",
-    to: "55 Hoàng Hoa Thám, Đà Lạt",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "75.000",
-  },
-  {
-    from: "15 Lý Tự Trọng, Nha Trang",
-    to: "77 Nguyễn Văn Cừ, Nha Trang",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "77.000",
-  },
-  {
-    from: "Số 26 Quang Trung, Hoàn Kiếm",
-    to: "Số 17 Lý Nam Đế, Hoàn Kiếm",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "76.000",
-  },
-  {
-    from: "Số 10 Cầu Gỗ, Hoàn Kiếm",
-    to: "Số 29 Lý Thường Kiệt, Hoàn Kiếm",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "54.000",
-  },
-  {
-    from: "Số 15 Trần Quang Khải, Hoàn Kiếm",
-    to: "Số 31 Nguyễn Thái Học, Ba Đình",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "64.000",
-  },
-  {
-    from: "Số 88 Tràng Tiền, Hoàn Kiếm",
-    to: "Số 88 Tràng Tiền, Hoàn Kiếm",
-    time: "14:50",
-    date: "21/2/2025",
-    price: "23.000",
-  },
-];
+import { useNavigation } from "@react-navigation/native";
+import { getMyTrips, getMyJoinedTrips } from "../api/tripsApi";
+import { useAuth } from "../context/AuthContext";
 
 const HistoryScreen = () => {
+  const navigation = useNavigation();
+  const { user } = useAuth();
   const [tab, setTab] = useState("hanhkhach");
+  const [passengerTrips, setPassengerTrips] = useState([]);
+  const [driverTrips, setDriverTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const renderList = (dataList) => (
-    <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-      {dataList.map((item, index) => (
-        <View key={index} style={styles.card}>
-          <View
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-between",
-            }}
+  useEffect(() => {
+    loadTripsHistory();
+  }, []);
+
+  const loadTripsHistory = async () => {
+    try {
+      setLoading(true);
+      
+      // Load both passenger trips and driver trips
+      const [passengerResponse, driverResponse] = await Promise.all([
+        getMyJoinedTrips({ includePast: true, limit: 50 }).catch(() => ({ data: [] })),
+        getMyTrips({ includePast: true, limit: 50 }).catch(() => ({ data: [] }))
+      ]);
+
+      // Format passenger trips
+      const formattedPassengerTrips = (passengerResponse.data || []).map(trip => formatTripForHistory(trip, 'passenger'));
+      
+      // Format driver trips  
+      const formattedDriverTrips = (driverResponse.data || []).map(trip => formatTripForHistory(trip, 'driver'));
+
+      setPassengerTrips(formattedPassengerTrips);
+      setDriverTrips(formattedDriverTrips);
+    } catch (error) {
+      console.error("Error loading trips history:", error);
+      Alert.alert("Lỗi", "Không thể tải lịch sử chuyến đi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadTripsHistory();
+    setRefreshing(false);
+  };
+
+  const formatTripForHistory = (trip, role) => {
+    const departureDate = new Date(trip.departureTime);
+    const formattedDate = `${departureDate.getDate()}/${departureDate.getMonth() + 1}/${departureDate.getFullYear()}`;
+    const formattedTime = departureDate.toLocaleTimeString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+
+    return {
+      id: trip._id,
+      from: trip.startLocation?.address || '',
+      to: trip.endLocation?.address || '',
+      time: formattedTime,
+      date: formattedDate,
+      price: trip.price?.toLocaleString('vi-VN') || '0',
+      status: trip.status,
+      role,
+      fullTrip: trip
+    };
+  };
+
+  const handleTripPress = (trip) => {
+    navigation.navigate("TripDetail", { tripId: trip.id });
+  };
+
+  const handleReorder = (trip) => {
+            navigation.navigate("CreateTrip");
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return '#4CAF50';
+      case 'cancelled': return '#F44336';
+      case 'in_progress': return '#FF9800';
+      case 'scheduled': return '#2196F3';
+      default: return '#666';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed': return 'Hoàn thành';
+      case 'cancelled': return 'Đã hủy';
+      case 'in_progress': return 'Đang di chuyển';
+      case 'scheduled': return 'Đã lên lịch';
+      default: return status;
+    }
+  };
+
+  const renderList = (dataList) => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4285F4" />
+          <Text style={styles.loadingText}>Đang tải lịch sử...</Text>
+        </View>
+      );
+    }
+
+    if (dataList.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            {tab === "hanhkhach" ? 
+              "Chưa có chuyến đi nào với vai trò hành khách" : 
+              "Chưa có chuyến đi nào với vai trò tài xế"}
+          </Text>
+                      <TouchableOpacity
+              style={styles.createTripButton}
+              onPress={() => navigation.navigate("CreateTrip")}
+            >
+            <Text style={styles.createTripButtonText}>
+              {tab === "hanhkhach" ? "Tìm chuyến đi" : "Tạo chuyến đi"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView 
+        style={styles.list} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {dataList.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.card}
+            onPress={() => handleTripPress(item)}
           >
-            <View style={{ flexDirection: "row", flex: 1 }}>
-              <Image
-                source={require("../assets/ic-doc.png")}
-                style={styles.dot}
-              />
-              <View style={styles.row}>
-                <Text style={styles.place}>{item.from}</Text>
-                <Text style={styles.place}>{item.to}</Text>
+            <View style={styles.cardHeader}>
+              <View style={{ flexDirection: "row", flex: 1 }}>
+                <Image
+                  source={require("../assets/ic-doc.png")}
+                  style={styles.dot}
+                />
+                <View style={styles.row}>
+                  <Text style={styles.place} numberOfLines={1}>
+                    {item.from}
+                  </Text>
+                  <Text style={styles.place} numberOfLines={1}>
+                    {item.to}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.priceContainer}>
+                <Text style={styles.price}>{item.price}đ</Text>
+                <Text style={[styles.status, { color: getStatusColor(item.status) }]}>
+                  {getStatusText(item.status)}
+                </Text>
               </View>
             </View>
-            <Text style={styles.price}>{item.price}</Text>
-          </View>
 
-          <View style={styles.footerRow}>
-            <Text style={styles.subInfo}>
-              {item.time} {item.date}
-            </Text>
-
-            <View style={styles.rightActions}>
-              <TouchableOpacity>
-                <Text style={styles.reorder}>Đặt lại →</Text>
-              </TouchableOpacity>
+            <View style={styles.footerRow}>
+              <Text style={styles.subInfo}>
+                {item.time} {item.date}
+              </Text>
+              <View style={styles.rightActions}>
+                <TouchableOpacity onPress={() => handleReorder(item)}>
+                  <Text style={styles.reorder}>Đặt lại →</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
-      ))}
-    </ScrollView>
-  );
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -212,7 +220,7 @@ const HistoryScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {tab === "hanhkhach" ? renderList(passengerData) : renderList(driverData)}
+      {tab === "hanhkhach" ? renderList(passengerTrips) : renderList(driverTrips)}
     </View>
   );
 };
@@ -289,6 +297,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#007BFF",
     marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 50,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 50,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  createTripButton: {
+    backgroundColor: "#4285F4",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  createTripButtonText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  priceContainer: {
+    alignItems: "flex-end",
+  },
+  status: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
   },
 });
 

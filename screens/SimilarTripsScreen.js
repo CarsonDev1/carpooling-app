@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,41 +10,113 @@ import {
   Image,
   Dimensions,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { joinTrip } from "../api/tripsApi";
 
 const { width } = Dimensions.get("window");
 
-const trips = [
-  {
-    id: "1",
-    from: "129 Phạm Ngọc Thạch, Đống Đa, Hà Nội",
-    to: "77 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
-    match: 90,
-  },
-  {
-    id: "2",
-    from: "129 Phạm Ngọc Thạch, Đống Đa, Hà Nội",
-    to: "77 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
-    match: 75,
-  },
-  {
-    id: "3",
-    from: "129 Phạm Ngọc Thạch, Đống Đa, Hà Nội",
-    to: "77 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
-    match: 90,
-  },
-  {
-    id: "4",
-    from: "129 Phạm Ngọc Thạch, Đống Đa, Hà Nội",
-    to: "77 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
-    match: 90,
-  },
-];
-
 export default function SimilarTripsScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(null);
+
+  // Get data from navigation params
+  const { 
+    trips: tripsData = [], 
+    searchParams = {}, 
+    fromLocation = "", 
+    toLocation = "",
+    estimatedPrice = null 
+  } = route.params || {};
+
+  useEffect(() => {
+    // Set trips data with calculated match percentage
+    const processedTrips = tripsData.map((trip, index) => ({
+      ...trip,
+      match: calculateMatchPercentage(trip, searchParams),
+      formattedFrom: trip.startLocation?.address || fromLocation,
+      formattedTo: trip.endLocation?.address || toLocation,
+      formattedDepartureTime: formatDateTime(trip.departureTime),
+    }));
+    setTrips(processedTrips);
+  }, [tripsData, searchParams, fromLocation, toLocation]);
+
+  // Calculate match percentage based on location proximity and time
+  const calculateMatchPercentage = (trip, params) => {
+    // Simple calculation based on distance and time
+    let match = 100;
+    
+    // Reduce match if time difference is too large
+    if (params.departureTime) {
+      const timeDiff = Math.abs(new Date(trip.departureTime) - new Date(params.departureTime));
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      if (hoursDiff > 2) match -= 20;
+      else if (hoursDiff > 1) match -= 10;
+    }
+    
+    // Random variation for demo
+    match -= Math.floor(Math.random() * 15);
+    return Math.max(75, Math.min(100, match));
+  };
+
+  // Format date time for display
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return `${date.toLocaleTimeString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })} ${date.toLocaleDateString('vi-VN')}`;
+  };
+
+  // Handle join trip
+  const handleJoinTrip = async (trip) => {
+    try {
+      setJoinLoading(trip._id);
+      
+      const passengerData = {
+        pickupLocation: {
+          address: fromLocation,
+          coordinates: searchParams.startLat && searchParams.startLng ? {
+            lat: searchParams.startLat,
+            lng: searchParams.startLng
+          } : null
+        },
+        dropoffLocation: {
+          address: toLocation,
+          coordinates: searchParams.endLat && searchParams.endLng ? {
+            lat: searchParams.endLat,
+            lng: searchParams.endLng
+          } : null
+        }
+      };
+
+      const response = await joinTrip(trip._id, passengerData);
+      
+      Alert.alert(
+        "Thành công! 🚗",
+        "Yêu cầu tham gia chuyến đi đã được gửi. Đang chờ tài xế xác nhận...",
+        [
+          {
+            text: "Chờ phản hồi",
+            onPress: () => navigation.navigate("WaitingForDriver", { 
+              tripId: trip._id,
+              passengerRequestId: response.data?._id 
+            })
+          }
+        ]
+      );
+    } catch (error) {
+      Alert.alert("Lỗi", error.message || "Không thể tham gia chuyến đi");
+    } finally {
+      setJoinLoading(null);
+    }
+  };
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
@@ -61,25 +133,41 @@ export default function SimilarTripsScreen() {
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {item.from}
+                {item.formattedFrom || item.startLocation?.address}
               </Text>
               <Text
                 style={styles.address}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {item.to}
+                {item.formattedTo || item.endLocation?.address}
               </Text>
             </View>
           </View>
-          <Text style={styles.departure}>Khởi hành: 14:50 21/2/2025</Text>
+          <Text style={styles.departure}>
+            Khởi hành: {item.formattedDepartureTime}
+          </Text>
+          <Text style={styles.priceText}>
+            Giá: {item.price?.toLocaleString('vi-VN') || 'Chưa có'} VND
+          </Text>
+          <Text style={styles.seatsText}>
+            Còn {item.availableSeats} chỗ trống
+          </Text>
         </View>
 
         {/* RIGHT: Match + Button */}
         <View style={styles.rightSection}>
           <Text style={styles.matchText}>Độ tương thích: {item.match}%</Text>
-          <TouchableOpacity style={styles.matchBtn}>
-            <Text style={styles.btnText}>Ghép chuyến</Text>
+          <TouchableOpacity 
+            style={[styles.matchBtn, joinLoading === item._id && styles.disabledBtn]}
+            onPress={() => handleJoinTrip(item)}
+            disabled={joinLoading === item._id}
+          >
+            {joinLoading === item._id ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.btnText}>Ghép chuyến</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -92,7 +180,10 @@ export default function SimilarTripsScreen() {
 
       <View style={styles.headerWrapper}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn}>
+          <TouchableOpacity 
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+          >
             <Ionicons name="arrow-back" size={24} color="#000" />
           </TouchableOpacity>
         </View>
@@ -195,6 +286,17 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
+  priceText: {
+    fontSize: 12,
+    color: "#2E7D32",
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  seatsText: {
+    fontSize: 12,
+    color: "#FF9800",
+    marginTop: 2,
+  },
 
   rightSection: {
     alignItems: "flex-end",
@@ -217,6 +319,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 13,
+  },
+  disabledBtn: {
+    opacity: 0.6,
   },
 
   footer: {

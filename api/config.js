@@ -8,12 +8,18 @@ const getApiBaseUrl = () => {
   if (__DEV__) {
     if (Platform.OS === "android") {
       // Android Emulator sử dụng 10.0.2.2 để truy cập localhost của host machine
-      return `http://192.168.1.7:5000/api`;
-    } else {
+      return `http://192.168.1.1:5000/api`;
+    } 
+    
+    else if (Platform.OS === "ios") {
       // iOS Simulator hoặc Physical Device - sử dụng IP thật của máy bạn
-      return "http://192.168.1.91:5000/api";
+      return "http://192.168.2.68:5000/api";
     }
-  } else {
+  } 
+  if (Platform.OS === "web") {
+    return "http://localhost:5000/api";
+  }
+  else {
     // Production
     return "https://your-production-api.com/api";
   }
