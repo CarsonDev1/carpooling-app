@@ -581,6 +581,11 @@ export default function WaitingForDriverScreen() {
 
   const sortDriverRequests = (requests) => {
     try {
+      if (!Array.isArray(requests)) {
+        console.warn('⚠️ sortDriverRequests: requests is not an array, returning empty array');
+        return [];
+      }
+      
       const sorted = [...requests];
       
       switch (sortBy) {
@@ -588,7 +593,7 @@ export default function WaitingForDriverScreen() {
           return sorted.sort((a, b) => (a.proposedPrice || 0) - (b.proposedPrice || 0));
         case 'rating':
           return sorted.sort((a, b) => 
-            (b.driver.rating?.asDriver?.average || 0) - (a.driver.rating?.asDriver?.average || 0)
+            (b.driver?.rating?.asDriver?.average || 0) - (a.driver?.rating?.asDriver?.average || 0)
           );
         case 'time':
           return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -597,7 +602,7 @@ export default function WaitingForDriverScreen() {
       }
     } catch (error) {
       console.error('❌ Sort requests error:', error);
-      return requests;
+      return Array.isArray(requests) ? requests : [];
     }
   };
 
@@ -734,8 +739,8 @@ export default function WaitingForDriverScreen() {
     const { date: departureDate, time: departureTime } = formatDateTime(trip.departureTime);
     const statusInfo = getStatusInfo();
     const driverRequests = trip.driverRequests || [];
-    const pendingRequests = driverRequests.filter(req => req.status === 'pending');
-    const sortedPendingRequests = sortDriverRequests(pendingRequests);
+    const pendingRequests = (driverRequests || []).filter(req => req.status === 'pending');
+    const sortedPendingRequests = sortDriverRequests(pendingRequests || []);
 
     return (
       <SafeAreaView style={styles.container}>
@@ -960,7 +965,7 @@ export default function WaitingForDriverScreen() {
                 
                 {/* Price Range Summary */}
                 {(() => {
-                  const prices = sortedPendingRequests.map(r => r.proposedPrice || 0).filter(p => p > 0);
+                  const prices = (sortedPendingRequests || []).map(r => r.proposedPrice || 0).filter(p => p > 0);
                   if (prices.length > 1) {
                     const minPrice = Math.min(...prices);
                     const maxPrice = Math.max(...prices);
@@ -1006,8 +1011,8 @@ export default function WaitingForDriverScreen() {
                 <View key={request._id} style={styles.driverRequestCard}>
                   {/* Best Price/Rating Badges */}
                   {(() => {
-                    const allPrices = sortedPendingRequests.map(r => r.proposedPrice || 0).filter(p => p > 0);
-                    const allRatings = sortedPendingRequests.map(r => r.driver.rating?.asDriver?.average || 0);
+                    const allPrices = (sortedPendingRequests || []).map(r => r.proposedPrice || 0).filter(p => p > 0);
+                    const allRatings = (sortedPendingRequests || []).map(r => r.driver.rating?.asDriver?.average || 0);
                     const minPrice = Math.min(...allPrices);
                     const maxRating = Math.max(...allRatings);
                     const isBestPrice = request.proposedPrice === minPrice && minPrice > 0;

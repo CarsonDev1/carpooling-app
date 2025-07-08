@@ -242,11 +242,11 @@ export default function HomeScreen() {
     // Determine status based on trip data
     let status = "Chưa ghép nối";
     if (trip.role === 'driver') {
-      const acceptedPassengers = trip.passengers?.filter(p => p.status === 'accepted') || [];
+      const acceptedPassengers = (trip.passengers || []).filter(p => p.status === 'accepted');
       status = acceptedPassengers.length > 0 ? "Đã ghép nối" : "Chưa ghép nối";
     } else {
       // For passenger, check if accepted
-      const myPassengerRecord = trip.passengers?.find(p => p.user === userData?._id);
+      const myPassengerRecord = (trip.passengers || []).find(p => p.user === userData?._id);
       status = myPassengerRecord?.status === 'accepted' ? "Đã ghép nối" : "Đang chờ xác nhận";
     }
 
@@ -330,8 +330,8 @@ export default function HomeScreen() {
                   <ActivityIndicator color="#4285F4" size="small" />
                   <Text style={styles.loadingTripsText}>Đang tải chuyến đi...</Text>
                 </View>
-              ) : upcomingTrips.length > 0 ? (
-                upcomingTrips.map((trip, index) => (
+              ) : (upcomingTrips || []).length > 0 ? (
+                (upcomingTrips || []).map((trip, index) => (
                   <TouchableOpacity
                     key={trip.id || index}
                     style={styles.mainTripCard}

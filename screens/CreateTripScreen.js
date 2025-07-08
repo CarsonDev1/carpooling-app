@@ -16,6 +16,8 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation } from "@react-navigation/native";
 import { createBookingRequest, estimatePrice, getVehicleTypes } from "../api/tripsApi";
 import { useAuth } from "../context/AuthContext";
+import MapView, { Marker } from 'react-native-maps';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 
 export default function CreateTripScreen() {
   const navigation = useNavigation();
@@ -45,6 +47,7 @@ export default function CreateTripScreen() {
   // Date/Time picker states
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [googleApiError, setGoogleApiError] = useState(false);
 
   useEffect(() => {
     loadVehicleTypes();
@@ -59,9 +62,20 @@ export default function CreateTripScreen() {
           ...response.data[key]
         }));
         setVehicleTypes(typesArray);
+      } else {
+        // Fallback vehicle types nếu API thất bại
+        setVehicleTypes([
+          { key: 'car', name: 'Ô tô', baseRate: 10000 },
+          { key: 'motorbike', name: 'Xe máy', baseRate: 5000 }
+        ]);
       }
     } catch (error) {
       console.error("Error loading vehicle types:", error);
+      // Fallback vehicle types nếu có lỗi
+      setVehicleTypes([
+        { key: 'car', name: 'Ô tô', baseRate: 10000 },
+        { key: 'motorbike', name: 'Xe máy', baseRate: 5000 }
+      ]);
     }
   };
 
@@ -469,8 +483,11 @@ export default function CreateTripScreen() {
     if (selectedTime) setDepartureTime(selectedTime);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
+  // Render function with error boundary
+  const renderContent = () => {
+    try {
+      return (
+        <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
@@ -485,31 +502,192 @@ export default function CreateTripScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Location Inputs */}
         <View style={styles.locationContainer}>
-          <View style={styles.inputRow}>
-            <Ionicons name="radio-button-on" size={20} color="#4285F4" />
-            <TextInput
-              style={styles.locationInput}
-              placeholder="Điểm khởi hành"
-              value={startLocation}
-              onChangeText={(text) => {
-                setStartLocation(text);
-                setStartCoordinates(getCoordinatesFromAddress(text));
-              }}
-            />
+          {/* Start Location Autocomplete */}
+          <View style={{ height: 60, marginBottom: 8 }}>
+            {!googleApiError ? (
+              <GooglePlacesAutocomplete
+                placeholder="Điểm khởi hành"
+                fetchDetails={true}
+                onPress={(data, details = null) => {
+                  console.log('🔍 Start location selected:', { data, details });
+                  try {
+                    if (details && details.formatted_address && details.geometry && details.geometry.location) {
+                      setStartLocation(details.formatted_address);
+                      setStartCoordinates({
+                        lat: details.geometry.location.lat,
+                        lng: details.geometry.location.lng,
+                      });
+                    } else {
+                      console.warn('⚠️ Invalid details from Google Places:', details);
+                      setStartLocation(data.description || data.structured_formatting?.main_text || 'Không xác định');
+                      // Use default coordinates if details are invalid
+                      setStartCoordinates({ lat: 10.7631, lng: 106.6814 });
+                    }
+                  } catch (error) {
+                    console.error('❌ Error processing start location:', error);
+                    setGoogleApiError(true);
+                    setStartLocation(data.description || 'Lỗi chọn địa điểm');
+                    setStartCoordinates({ lat: 10.7631, lng: 106.6814 });
+                  }
+                }}
+                onFail={(error) => {
+                  console.error('❌ Google Places API error:', error);
+                  setGoogleApiError(true);
+                }}
+                onNotFound={() => {
+                  console.warn('⚠️ No results found');
+                }}
+                query={{
+                  key: 'AIzaSyCa3JX22GNbcCrdmdCditNQX9sz9NjCEcM',
+                  language: 'vi',
+                  components: 'country:vn',
+                }}
+                styles={{
+                  textInput: {
+                    height: 44,
+                    borderRadius: 8,
+                    borderColor: '#E0E0E0',
+                    borderWidth: 1,
+                    paddingHorizontal: 10,
+                    fontSize: 16,
+                  },
+                }}
+                enablePoweredByContainer={false}
+                debounce={300}
+                nearbyPlacesAPI="GooglePlacesSearch"
+                textInputProps={{
+                  value: startLocation,
+                  onChangeText: (text) => setStartLocation(text),
+                }}
+              />
+            ) : (
+              <TextInput
+                style={{
+                  height: 44,
+                  borderRadius: 8,
+                  borderColor: '#E0E0E0',
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  fontSize: 16,
+                }}
+                placeholder="Điểm khởi hành (Nhập thủ công)"
+                value={startLocation}
+                onChangeText={setStartLocation}
+              />
+            )}
           </View>
-          
-          <View style={styles.inputRow}>
-            <Ionicons name="location" size={20} color="#FF5722" />
-            <TextInput
-              style={styles.locationInput}
-              placeholder="Điểm đến"
-              value={endLocation}
-              onChangeText={(text) => {
-                setEndLocation(text);
-                setEndCoordinates(getCoordinatesFromAddress(text));
+          {/* Start Location Map */}
+          <MapView
+            style={{ height: 120, borderRadius: 12, marginBottom: 12 }}
+            region={{
+              latitude: startCoordinates.lat,
+              longitude: startCoordinates.lng,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+          >
+            <Marker
+              coordinate={{
+                latitude: startCoordinates.lat,
+                longitude: startCoordinates.lng,
               }}
+              title="Điểm khởi hành"
+              description={startLocation}
             />
+          </MapView>
+          {/* End Location Autocomplete */}
+          <View style={{ height: 60, marginBottom: 8 }}>
+            {!googleApiError ? (
+              <GooglePlacesAutocomplete
+                placeholder="Điểm đến"
+                fetchDetails={true}
+                onPress={(data, details = null) => {
+                  console.log('🔍 End location selected:', { data, details });
+                  try {
+                    if (details && details.formatted_address && details.geometry && details.geometry.location) {
+                      setEndLocation(details.formatted_address);
+                      setEndCoordinates({
+                        lat: details.geometry.location.lat,
+                        lng: details.geometry.location.lng,
+                      });
+                    } else {
+                      console.warn('⚠️ Invalid details from Google Places:', details);
+                      setEndLocation(data.description || data.structured_formatting?.main_text || 'Không xác định');
+                      // Use default coordinates if details are invalid
+                      setEndCoordinates({ lat: 10.7951, lng: 106.7218 });
+                    }
+                  } catch (error) {
+                    console.error('❌ Error processing end location:', error);
+                    setGoogleApiError(true);
+                    setEndLocation(data.description || 'Lỗi chọn địa điểm');
+                    setEndCoordinates({ lat: 10.7951, lng: 106.7218 });
+                  }
+                }}
+                onFail={(error) => {
+                  console.error('❌ Google Places API error:', error);
+                  setGoogleApiError(true);
+                }}
+                onNotFound={() => {
+                  console.warn('⚠️ No results found');
+                }}
+                query={{
+                  key: 'AIzaSyBrYH7Tkdocmuh9rFvlZ-Iugq3d7ov3_Nc',
+                  language: 'vi',
+                  components: 'country:vn',
+                }}
+                styles={{
+                  textInput: {
+                    height: 44,
+                    borderRadius: 8,
+                    borderColor: '#E0E0E0',
+                    borderWidth: 1,
+                    paddingHorizontal: 10,
+                    fontSize: 16,
+                  },
+                }}
+                enablePoweredByContainer={false}
+                debounce={300}
+                nearbyPlacesAPI="GooglePlacesSearch"
+                textInputProps={{
+                  value: endLocation,
+                  onChangeText: (text) => setEndLocation(text),
+                }}
+              />
+            ) : (
+              <TextInput
+                style={{
+                  height: 44,
+                  borderRadius: 8,
+                  borderColor: '#E0E0E0',
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  fontSize: 16,
+                }}
+                placeholder="Điểm đến (Nhập thủ công)"
+                value={endLocation}
+                onChangeText={setEndLocation}
+              />
+            )}
           </View>
+          {/* End Location Map */}
+          <MapView
+            style={{ height: 120, borderRadius: 12, marginBottom: 12 }}
+            region={{
+              latitude: endCoordinates.lat,
+              longitude: endCoordinates.lng,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+          >
+            <Marker
+              coordinate={{
+                latitude: endCoordinates.lat,
+                longitude: endCoordinates.lng,
+              }}
+              title="Điểm đến"
+              description={endLocation}
+            />
+          </MapView>
         </View>
 
         {/* Date & Time */}
@@ -574,7 +752,7 @@ export default function CreateTripScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Loại xe</Text>
           <View style={styles.vehicleTypes}>
-            {vehicleTypes.map((vehicle) => (
+            {(vehicleTypes || []).map((vehicle) => (
               <TouchableOpacity
                 key={vehicle.key}
                 style={[
@@ -665,6 +843,77 @@ export default function CreateTripScreen() {
           <Text style={styles.debugText}>Max Price: {maxPrice || 'Not set'}</Text>
         </View>
 
+        {/* Google API Error Notice */}
+        {googleApiError && (
+          <View style={styles.errorNotice}>
+            <Text style={styles.errorNoticeText}>
+              ⚠️ Google Places API gặp lỗi. Bạn có thể nhập địa chỉ thủ công hoặc thử kết nối lại.
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => setGoogleApiError(false)}
+            >
+              <Text style={styles.retryButtonText}>🔄 Thử lại Google API</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Google API Test */}
+        <TouchableOpacity
+          style={[styles.googleTestButton, loading && styles.disabledButton]}
+          onPress={async () => {
+            try {
+              setLoading(true);
+              console.log('🔍 Testing Google Places API...');
+              
+              // Test Google Places API directly
+              const testUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=Hồ Chí Minh&key=AIzaSyBrYH7Tkdocmuh9rFvlZ-Iugq3d7ov3_Nc&language=vi&components=country:vn`;
+              
+              const response = await fetch(testUrl);
+              const data = await response.json();
+              
+              console.log('🔍 Google Places API response:', data);
+              
+              if (data.status === 'OK' && data.predictions && data.predictions.length > 0) {
+                Alert.alert(
+                  "✅ Google API OK!", 
+                  `Tìm thấy ${data.predictions.length} kết quả.\nFirst result: ${data.predictions[0].description}`
+                );
+              } else if (data.status === 'REQUEST_DENIED') {
+                Alert.alert(
+                  "❌ API Key Invalid!", 
+                  `Google API từ chối: ${data.error_message || 'Key không hợp lệ'}`
+                );
+              } else if (data.status === 'OVER_QUERY_LIMIT') {
+                Alert.alert(
+                  "❌ API Limit!", 
+                  "Đã vượt quá giới hạn query của Google API"
+                );
+              } else {
+                Alert.alert(
+                  "⚠️ API Issue", 
+                  `Status: ${data.status}\nError: ${data.error_message || 'Unknown'}`
+                );
+              }
+            } catch (error) {
+              console.log('❌ Google API test error:', error);
+              Alert.alert(
+                "🚨 Không test được Google API!", 
+                `Lỗi: ${error.message}\n\nKiểm tra:\n1. Kết nối internet\n2. API key hợp lệ\n3. Billing enabled`
+              );
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text style={styles.googleTestButtonText}>🗺️ Test Google API</Text>
+          )}
+        </TouchableOpacity>
+
         {/* Backend Status Check */}
         <TouchableOpacity
           style={[styles.checkButton, loading && styles.disabledButton]}
@@ -745,9 +994,41 @@ export default function CreateTripScreen() {
           display="default"
           onChange={onTimeChange}
         />
-      )}
-    </SafeAreaView>
-  );
+        )}
+      </SafeAreaView>
+    );
+    } catch (error) {
+      console.error('❌ CreateTripScreen render error:', error);
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Đặt xe</Text>
+          </View>
+          <View style={styles.content}>
+            <View style={styles.errorNotice}>
+              <Text style={styles.errorNoticeText}>
+                ❌ Đã xảy ra lỗi khi tải trang. Vui lòng thử lại.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.retryButtonText}>🔄 Quay lại</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      );
+    }
+  };
+
+  return renderContent();
 }
 
 const styles = StyleSheet.create({
@@ -919,6 +1200,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
+  googleTestButton: {
+    backgroundColor: "#FF5722",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  googleTestButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   checkButton: {
     backgroundColor: "#9C27B0",
     padding: 16,
@@ -980,5 +1273,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginBottom: 4,
+  },
+  errorNotice: {
+    backgroundColor: "#FFF3CD",
+    borderColor: "#FFEAA7",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorNoticeText: {
+    fontSize: 14,
+    color: "#856404",
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: "#FFC107",
+    padding: 8,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  retryButtonText: {
+    color: "#212529",
+    fontSize: 14,
+    fontWeight: "600",
   },
 }); 

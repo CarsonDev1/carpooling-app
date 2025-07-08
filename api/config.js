@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
   if (__DEV__) {
     if (Platform.OS === "android") {
       // Android Emulator sử dụng 10.0.2.2 để truy cập localhost của host machine
-      return `http://192.168.1.1:5000/api`;
+      return `http://192.168.1.43:5000/api`;
     } 
     
     else if (Platform.OS === "ios") {
