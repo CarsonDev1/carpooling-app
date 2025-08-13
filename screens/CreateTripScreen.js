@@ -1,1301 +1,908 @@
-import React, { useState, useEffect } from "react";
+// Custom Mapbox Geocoding implementation for React Native
+// Simple input without any conflicts
+
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  Alert,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation } from "@react-navigation/native";
-import { createBookingRequest, estimatePrice, getVehicleTypes } from "../api/tripsApi";
-import { useAuth } from "../context/AuthContext";
-import MapView, { Marker } from 'react-native-maps';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+	View,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	StyleSheet,
+	ScrollView,
+	SafeAreaView,
+	Alert,
+	ActivityIndicator,
+	Platform,
+	Switch,
+	FlatList,
+	Dimensions,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { createBookingRequest, estimatePrice, getVehicleTypes } from '../api/tripsApi';
+import { useAuth } from '../context/AuthContext';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import RouteInfo from '../components/RouteInfo';
+
+const { width, height } = Dimensions.get('window');
+
+const MAPBOX_ACCESS_TOKEN =
+	'pk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWRvb3ViNHQwMjQ4MmpxMHZ3Yng5b3gxIn0.kt2yx_c1j5JbxRF6SdzXyg';
 
 export default function CreateTripScreen() {
-  const navigation = useNavigation();
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [estimating, setEstimating] = useState(false);
+	const navigation = useNavigation();
+	const route = useRoute();
+	const { user } = useAuth();
+	const [loading, setLoading] = useState(false);
+	const [estimating, setEstimating] = useState(false);
 
-  // Form data - Auto-filled for testing
-  const [startLocation, setStartLocation] = useState("Nhà Tao 22, TP HCM");
-  const [endLocation, setEndLocation] = useState("Nhà mài 222, TP HCM");
-  const [startCoordinates, setStartCoordinates] = useState({ lat: 10.7631, lng: 106.6814 });
-  const [endCoordinates, setEndCoordinates] = useState({ lat: 10.7951, lng: 106.7218 });
-  
-  // Set future date/time - 1 hour from now
-  const futureDateTime = new Date(Date.now() + 60 * 60 * 1000);
-  const [departureDate, setDepartureDate] = useState(futureDateTime);
-  const [departureTime, setDepartureTime] = useState(futureDateTime);
-  
-  const [availableSeats, setAvailableSeats] = useState("1");
-  const [notes, setNotes] = useState("Cần xe có điều hòa");
-  const [vehicleType, setVehicleType] = useState("car");
-  const [estimatedPrice, setEstimatedPrice] = useState(null);
-  const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [maxPrice, setMaxPrice] = useState("100000");
+	// Form data
+	const [startLocation, setStartLocation] = useState('');
+	const [endLocation, setEndLocation] = useState('');
+	const [startCoordinates, setStartCoordinates] = useState(null);
+	const [endCoordinates, setEndCoordinates] = useState(null);
 
-  // Date/Time picker states
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [googleApiError, setGoogleApiError] = useState(false);
+	const futureDateTime = new Date(Date.now() + 60 * 60 * 1000);
+	const [departureDate, setDepartureDate] = useState(futureDateTime);
+	const [departureTime, setDepartureTime] = useState(futureDateTime);
 
-  useEffect(() => {
-    loadVehicleTypes();
-  }, []);
+	const [availableSeats, setAvailableSeats] = useState('1');
+	const [notes, setNotes] = useState('');
+	const [vehicleType, setVehicleType] = useState('car');
+	const [estimatedPrice, setEstimatedPrice] = useState(null);
+	const [vehicleTypes, setVehicleTypes] = useState([]);
+	const [isRecurring, setIsRecurring] = useState(false);
+	const [maxPrice, setMaxPrice] = useState('100000');
 
-  const loadVehicleTypes = async () => {
-    try {
-      const response = await getVehicleTypes();
-      if (response.success && response.data) {
-        const typesArray = Object.keys(response.data).map(key => ({
-          key,
-          ...response.data[key]
-        }));
-        setVehicleTypes(typesArray);
-      } else {
-        // Fallback vehicle types nếu API thất bại
-        setVehicleTypes([
-          { key: 'car', name: 'Ô tô', baseRate: 10000 },
-          { key: 'motorbike', name: 'Xe máy', baseRate: 5000 }
-        ]);
-      }
-    } catch (error) {
-      console.error("Error loading vehicle types:", error);
-      // Fallback vehicle types nếu có lỗi
-      setVehicleTypes([
-        { key: 'car', name: 'Ô tô', baseRate: 10000 },
-        { key: 'motorbike', name: 'Xe máy', baseRate: 5000 }
-      ]);
-    }
-  };
+	// Date/Time picker states
+	const [showDatePicker, setShowDatePicker] = useState(false);
+	const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // Mock function to get coordinates from address
-  const getCoordinatesFromAddress = (address) => {
-    const mockCoordinates = {
-      // Hà Nội addresses
-      "24 Chùa Láng, P. Láng Thượng, Đống Đa, Hà Nội": { lat: 21.0285, lng: 105.8542 },
-      "46 Nguyễn Trường Tộ, Trúc Bạch, Ba Đình, Hà Nội": { lat: 21.0245, lng: 105.8412 },
-      "53 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội": { lat: 21.0167, lng: 105.8448 },
-      "168 Lương Định Của, Kim Liên, Đống Đa, Hà Nội": { lat: 21.0178, lng: 105.8398 },
-      
-      // TP HCM addresses
-      "Nhà Tao, TP HCM": { lat: 10.7631, lng: 106.6814 },
-      "Nhà mài, TP HCM": { lat: 10.7951, lng: 106.7218 },
-      "Đại học Sài Gòn, Q5, TP HCM": { lat: 10.7595, lng: 106.6782 },
-      "Quận 1, TP HCM": { lat: 10.7769, lng: 106.7009 },
-      "Sân bay Tân Sơn Nhất, TP HCM": { lat: 10.8231, lng: 106.6297 },
-      "Bến xe Miền Đông, TP HCM": { lat: 10.8142, lng: 106.7317 },
-      "Chợ Bến Thành, TP HCM": { lat: 10.7722, lng: 106.6980 },
-    };
-    
-    const coords = mockCoordinates[address] || { lat: 10.7631, lng: 106.6814 }; // Default TP HCM
-    console.log('📍 getCoordinatesFromAddress:', address, '→', coords);
-    return coords;
-  };
+	// Location search states
+	const [startSuggestions, setStartSuggestions] = useState([]);
+	const [endSuggestions, setEndSuggestions] = useState([]);
+	const [showStartSuggestions, setShowStartSuggestions] = useState(false);
+	const [showEndSuggestions, setShowEndSuggestions] = useState(false);
+	const [startSearching, setStartSearching] = useState(false);
+	const [endSearching, setEndSearching] = useState(false);
 
-  const handleEstimatePrice = async () => {
-    if (!startCoordinates || !endCoordinates) {
-      Alert.alert("Lỗi", "Vui lòng chọn điểm đi và điểm đến");
-      return;
-    }
+	useEffect(() => {
+		loadVehicleTypes();
+	}, []);
 
-    try {
-      setEstimating(true);
-      const priceData = {
-        startLocation: { coordinates: startCoordinates },
-        endLocation: { coordinates: endCoordinates },
-        departureTime: combineDateAndTime(departureDate, departureTime),
-        vehicleType
-      };
+	const loadVehicleTypes = async () => {
+		try {
+			const response = await getVehicleTypes();
+			if (response?.success && response?.data) {
+				const typesArray = Object.keys(response.data).map((key) => ({
+					key,
+					...response.data[key],
+				}));
+				setVehicleTypes(typesArray);
+			} else {
+				setVehicleTypes([
+					{ key: 'car', name: 'Ô tô', baseRate: 10000 },
+					{ key: 'motorbike', name: 'Xe máy', baseRate: 5000 },
+				]);
+			}
+		} catch (error) {
+			console.error('Error loading vehicle types:', error);
+			setVehicleTypes([
+				{ key: 'car', name: 'Ô tô', baseRate: 10000 },
+				{ key: 'motorbike', name: 'Xe máy', baseRate: 5000 },
+			]);
+		}
+	};
 
-      const response = await estimatePrice(priceData);
-      setEstimatedPrice(response.data);
-    } catch (error) {
-      Alert.alert("Lỗi", error.message || "Không thể ước tính giá");
-    } finally {
-      setEstimating(false);
-    }
-  };
+	// Search function
+	const searchLocations = async (query, setSuggestions, setShowSuggestions, setSearching) => {
+		if (query.length < 2) {
+			Alert.alert('Thông báo', 'Vui lòng nhập ít nhất 2 ký tự để tìm kiếm');
+			return;
+		}
 
-  const handleCreateBookingRequestWithTestData = async () => {
-    console.log('🧪 Creating booking request with TEST DATA...');
-    
-    try {
-      setLoading(true);
-      
-      // Hard-coded test data matching your format
-      const testBookingData = {
-        startLocation: {
-          address: "Nhà Tao 1111, TP HCM",
-          coordinates: {
-            type: "Point",
-            coordinates: [106.6814, 10.7631] // [longitude, latitude]
-          }
-        },
-        endLocation: {
-          address: "Nhà mài 1111, TP HCM", 
-          coordinates: {
-            type: "Point",
-            coordinates: [106.7218, 10.7951] // [longitude, latitude]
-          }
-        },
-        departureTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
-        estimatedArrivalTime: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours from now
-        preferredVehicleType: "car",
-        maxPrice: 100000,
-        availableSeats: 1,
-        requestNote: "Cần đi gấp, tôi sẽ chờ ở tầng 1",
-        currency: "VND",
-        notes: "Cần xe có điều hòa",
-        stops: [
-          {
-            address: "Đại học Sài Gòn, Q5, TP HCM",
-            coordinates: {
-              type: "Point",
-              coordinates: [106.6782, 10.7595] // [longitude, latitude]
-            },
-            estimatedArrivalTime: new Date(Date.now() + 2.5 * 60 * 60 * 1000)
-          }
-        ],
-        recurring: {
-          isRecurring: false,
-          pattern: "daily",
-          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
-        }
-      };
+		try {
+			setSearching(true);
+			const response = await fetch(
+				`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+				`access_token=${MAPBOX_ACCESS_TOKEN}&` +
+				`country=VN&` +
+				`language=vi&` +
+				`limit=5&` +
+				`types=poi,address`
+			);
 
-      console.log('🚗 Creating booking request with TEST data:', {
-        ...testBookingData,
-        departureTime: testBookingData.departureTime.toISOString(),
-        estimatedArrivalTime: testBookingData.estimatedArrivalTime.toISOString(),
-      });
+			const data = await response.json();
+			console.log('🗺️ Mapbox search results:', data);
 
-      console.log('📡 Calling createBookingRequest API...');
-      const response = await createBookingRequest(testBookingData);
-      console.log('✅ TEST API Response:', response);
-      console.log('🔍 Response structure:', {
-        success: response?.success,
-        hasData: !!response?.data,
-        hasTripId: !!response?.data?._id,
-        tripId: response?.data?._id
-      });
+			if (data.features && data.features.length > 0) {
+				setSuggestions(data.features);
+				setShowSuggestions(true);
+			} else {
+				Alert.alert('Thông báo', 'Không tìm thấy địa điểm nào');
+			}
+		} catch (error) {
+			console.error('Mapbox search error:', error);
+			Alert.alert('Lỗi', 'Không thể tìm kiếm địa điểm');
+		} finally {
+			setSearching(false);
+		}
+	};
 
-      // Check if response is valid before navigation - VERY STRICT
-      if (response && 
-          response.success === true && 
-          response.data && 
-          response.data._id && 
-          typeof response.data._id === 'string' &&
-          response.data._id.length > 0) {
-        const tripId = response.data._id;
-        
-        // Safely extract booking info with fallback
-        const bookingInfo = response.pricing ? {
-          estimatedPrice: response.pricing.estimatedPrice,
-          maxPrice: response.pricing.maxPrice,
-          preferredVehicleType: response.pricing.preferredVehicleType || 'car',
-          currency: response.pricing.currency || 'VND',
-          breakdown: response.pricing.breakdown
-        } : {
-          estimatedPrice: testBookingData.maxPrice || 100000,
-          maxPrice: testBookingData.maxPrice || 100000,
-          preferredVehicleType: testBookingData.preferredVehicleType || 'car',
-          currency: 'VND',
-          breakdown: null
-        };
-        
-        console.log('🚀 Navigating to WaitingForDriver with:', { tripId, bookingInfo });
-        console.log('🔍 tripId type:', typeof tripId, 'value:', tripId);
-        console.log('💰 bookingInfo:', bookingInfo);
-        
-        // Navigate first
-        navigation.navigate("WaitingForDriver", { 
-          tripId: tripId,
-          bookingInfo: bookingInfo,
-          tripData: response.data // Pass full trip data as backup
-        });
-        
-        // Then show success message
-        setTimeout(() => {
-          Alert.alert(
-            "TEST thành công! 🎉", 
-            "Yêu cầu đặt xe TEST đã được tạo! Đang chờ tài xế phản hồi.",
-            [{ text: "OK" }]
-          );
-        }, 500);
-      } else {
-        console.log('❌ Invalid API response:', response);
-        console.log('❌ Response validation failed:', {
-          hasResponse: !!response,
-          success: response?.success,
-          hasData: !!response?.data,
-          hasTripId: !!response?.data?._id,
-          tripIdType: typeof response?.data?._id,
-          tripIdValue: response?.data?._id
-        });
-        
-        Alert.alert(
-          "❌ KHÔNG TẠO ĐƯỢC CHUYẾN ĐI!", 
-          `Phản hồi từ server không hợp lệ:\n\n` +
-          `• Success: ${response?.success}\n` +
-          `• Has Data: ${!!response?.data}\n` +
-          `• Trip ID: ${response?.data?._id || 'null'}\n\n` +
-          `🚫 APP KHÔNG ĐƯỢC CHUYỂN TRANG!\n` +
-          `📞 Kiểm tra backend server có chạy không?`
-        );
-      }
-    } catch (error) {
-      console.error('❌ Create TEST booking request error:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        stack: error.stack
-      });
-      
-      // More specific error messages
-      let errorMessage = "Không thể tạo yêu cầu đặt xe TEST";
-      
-      if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
-        errorMessage = "🌐 BACKEND CHƯA CHẠY!\n\n" +
-                      "🔧 Hãy start backend server:\n" +
-                      "cd carpooling-be && npm start\n\n" +
-                      "🚫 KHÔNG TẠO ĐƯỢC CHUYẾN ĐI!";
-      } else if (error.response?.status === 500) {
-        errorMessage = "🔥 Lỗi server - Backend có vấn đề\n🚫 KHÔNG TẠO ĐƯỢC CHUYẾN ĐI!";
-      } else if (error.response?.status === 401) {
-        errorMessage = "🔐 Lỗi xác thực - Vui lòng đăng nhập lại\n🚫 KHÔNG TẠO ĐƯỢC CHUYẾN ĐI!";
-      } else if (error.response?.data?.message) {
-        errorMessage = `📝 ${error.response.data.message}\n🚫 KHÔNG TẠO ĐƯỢC CHUYẾN ĐI!`;
-      } else if (error.message) {
-        errorMessage = `⚠️ ${error.message}\n🚫 KHÔNG TẠO ĐƯỢC CHUYẾN ĐI!`;
-      }
-      
-      Alert.alert("Lỗi TEST", errorMessage);
-    } finally {
-      setLoading(false);
+	const handleStartSearch = () => {
+		searchLocations(startLocation, setStartSuggestions, setShowStartSuggestions, setStartSearching);
+	};
 
-    }
-  };
+	const handleEndSearch = () => {
+		searchLocations(endLocation, setEndSuggestions, setShowEndSuggestions, setEndSearching);
+	};
 
-  const handleCreateBookingRequest = async () => {
-    console.log('🔍 Starting validation checks...');
-    
-    // Debug current values
-    console.log('📋 Current form values:', {
-      startLocation,
-      endLocation,
-      startCoordinates,
-      endCoordinates,
-      availableSeats,
-      maxPrice,
-      departureDate: departureDate.toISOString(),
-      departureTime: departureTime.toISOString(),
-    });
-    
-    // Validation
-    if (!startLocation || !endLocation || !startCoordinates || !endCoordinates) {
-      console.log('❌ Location validation failed');
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ điểm đi và điểm đến");
-      return;
-    }
+	const handleStartSuggestionPress = (item) => {
+		const coordinates = item.geometry.coordinates;
+		setStartLocation(item.place_name);
+		setStartCoordinates({
+			lat: coordinates[1],
+			lng: coordinates[0],
+		});
+		setShowStartSuggestions(false);
+	};
 
-    if (!availableSeats || parseInt(availableSeats) <= 0 || parseInt(availableSeats) > 8) {
-      console.log('❌ Seats validation failed');
-      Alert.alert("Lỗi", "Vui lòng nhập số chỗ cần đặt hợp lệ (1-8 chỗ)");
-      return;
-    }
+	const handleEndSuggestionPress = (item) => {
+		const coordinates = item.geometry.coordinates;
+		setEndLocation(item.place_name);
+		setEndCoordinates({
+			lat: coordinates[1],
+			lng: coordinates[0],
+		});
+		setShowEndSuggestions(false);
+	};
 
-    if (maxPrice && parseInt(maxPrice) <= 0) {
-      console.log('❌ Price validation failed');
-      Alert.alert("Lỗi", "Giá tối đa phải lớn hơn 0");
-      return;
-    }
+	const handleEstimatePrice = async () => {
+		if (!startCoordinates || !endCoordinates) {
+			Alert.alert('Lỗi', 'Vui lòng chọn điểm đi và điểm đến');
+			return;
+		}
 
-    // Check if departure time is in the future
-    const departureDateTime = combineDateAndTime(departureDate, departureTime);
-    const now = new Date();
-    console.log('⏰ Time check:', {
-      departureDateTime: departureDateTime.toISOString(),
-      now: now.toISOString(),
-      isInFuture: departureDateTime > now
-    });
-    
-    if (departureDateTime <= now) {
-      console.log('❌ Time validation failed');
-      Alert.alert("Lỗi", `Thời gian khởi hành phải trong tương lai.\nHiện tại: ${now.toLocaleString('vi-VN')}\nĐã chọn: ${departureDateTime.toLocaleString('vi-VN')}`);
-      return;
-    }
-    
-    console.log('✅ All validations passed!');
+		try {
+			setEstimating(true);
+			const priceData = {
+				startLocation: { coordinates: startCoordinates },
+				endLocation: { coordinates: endCoordinates },
+				departureTime: combineDateAndTime(departureDate, departureTime),
+				vehicleType,
+			};
 
-    try {
-      setLoading(true);
-      
-      const departureDateTime = combineDateAndTime(departureDate, departureTime);
-      
-      // Calculate estimated arrival time based on distance and traffic
-      let estimatedDurationMinutes = 60; // Default 1 hour
-      if (estimatedPrice?.distance) {
-        // Base calculation: 30km/h average speed in city traffic
-        const avgSpeedKmh = 30;
-        estimatedDurationMinutes = Math.ceil((estimatedPrice.distance / avgSpeedKmh) * 60);
-        
-        // Add buffer time for traffic and stops
-        estimatedDurationMinutes += 15; // 15 minutes buffer
-        
-        // Minimum 15 minutes, maximum 4 hours
-        estimatedDurationMinutes = Math.max(15, Math.min(240, estimatedDurationMinutes));
-      }
-      
-      const estimatedArrivalDateTime = new Date(
-        departureDateTime.getTime() + estimatedDurationMinutes * 60 * 1000
-      );
-      
-      const bookingData = {
-        startLocation: {
-          address: startLocation,
-          coordinates: {
-            type: "Point",
-            coordinates: [startCoordinates.lng, startCoordinates.lat] // [longitude, latitude]
-          }
-        },
-        endLocation: {
-          address: endLocation,
-          coordinates: {
-            type: "Point", 
-            coordinates: [endCoordinates.lng, endCoordinates.lat] // [longitude, latitude]
-          }
-        },
-        departureTime: departureDateTime,
-        estimatedArrivalTime: estimatedArrivalDateTime,
-        availableSeats: parseInt(availableSeats),
-        notes: notes.trim(), // General notes for trip
-        requestNote: notes.trim(), // Specific message for drivers
-        preferredVehicleType: vehicleType,
-        maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
-        currency: "VND",
-        stops: [], // Empty array for now, can be enhanced later 
-        // Note: When adding stops, use format:
-        // { address: "...", coordinates: { type: "Point", coordinates: [lng, lat] } }
-        recurring: {
-          isRecurring,
-          pattern: isRecurring ? "daily" : undefined,
-          endDate: isRecurring ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : undefined // 1 year from now
-        }
-      };
+			const response = await estimatePrice(priceData);
+			setEstimatedPrice(response.data);
+		} catch (error) {
+			Alert.alert('Lỗi', error.message || 'Không thể ước tính giá');
+		} finally {
+			setEstimating(false);
+		}
+	};
 
-      console.log('🚗 Creating booking request with data:', {
-        ...bookingData,
-        departureTime: bookingData.departureTime.toISOString(),
-        estimatedArrivalTime: bookingData.estimatedArrivalTime.toISOString(),
-        estimatedDurationMinutes
-      });
+	const handleCreateBookingRequest = async () => {
+		if (!startLocation || !endLocation) {
+			Alert.alert('Lỗi', 'Vui lòng nhập điểm đi và điểm đến');
+			return;
+		}
 
-      console.log('📡 Calling createBookingRequest API...');
-      const response = await createBookingRequest(bookingData);
-      console.log('✅ API Response:', response);
+		if (!startCoordinates || !endCoordinates) {
+			Alert.alert('Lỗi', 'Vui lòng chọn địa điểm từ danh sách gợi ý');
+			return;
+		}
 
-      // Check if response is valid before navigation
-      if (response && response.success && response.data && response.data._id) {
-        const tripId = response.data._id;
-        
-        // Safely extract booking info with fallback
-        const bookingInfo = response.pricing ? {
-          estimatedPrice: response.pricing.estimatedPrice,
-          maxPrice: response.pricing.maxPrice,
-          preferredVehicleType: response.pricing.preferredVehicleType || 'car',
-          currency: response.pricing.currency || 'VND',
-          breakdown: response.pricing.breakdown
-        } : {
-          estimatedPrice: maxPrice ? parseInt(maxPrice) : 100000,
-          maxPrice: maxPrice ? parseInt(maxPrice) : 100000,
-          preferredVehicleType: vehicleType || 'car',
-          currency: 'VND',
-          breakdown: null
-        };
-        
-        console.log('🚀 Navigating to WaitingForDriver with:', { tripId, bookingInfo });
-        console.log('🔍 tripId type:', typeof tripId, 'value:', tripId);
-        console.log('💰 bookingInfo:', bookingInfo);
-        
-        // Navigate first
-        navigation.navigate("WaitingForDriver", { 
-          tripId: tripId,
-          bookingInfo: bookingInfo,
-          tripData: response.data // Pass full trip data as backup
-        });
-        
-        // Then show success message
-        setTimeout(() => {
-          Alert.alert(
-            "Thành công! 🎉", 
-            "Yêu cầu đặt xe đã được tạo! Đang chờ tài xế phản hồi.",
-            [{ text: "OK" }]
-          );
-        }, 500);
-      } else {
-        console.log('❌ Invalid API response:', response);
-        Alert.alert("Lỗi", "Phản hồi từ server không hợp lệ");
-      }
-    } catch (error) {
-      console.error('❌ Create booking request error:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        stack: error.stack
-      });
-      
-      const errorMessage = error.response?.data?.message || error.message || "Không thể tạo yêu cầu đặt xe";
-      Alert.alert("Lỗi", errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+		if (!user) {
+			Alert.alert('Lỗi', 'Vui lòng đăng nhập để tạo yêu cầu');
+			return;
+		}
 
-  const combineDateAndTime = (date, time) => {
-    const combined = new Date(date);
-    combined.setHours(time.getHours());
-    combined.setMinutes(time.getMinutes());
-    combined.setSeconds(0);
-    combined.setMilliseconds(0);
-    return combined;
-  };
+		try {
+			setLoading(true);
+			const bookingData = {
+				startLocation: {
+					address: startLocation,
+					coordinates: startCoordinates,
+				},
+				endLocation: {
+					address: endLocation,
+					coordinates: endCoordinates,
+				},
+				departureTime: combineDateAndTime(departureDate, departureTime),
+				vehicleType,
+				availableSeats: parseInt(availableSeats),
+				notes,
+				maxPrice: parseInt(maxPrice),
+				isRecurring,
+			};
 
-  const onDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) setDepartureDate(selectedDate);
-  };
+			const response = await createBookingRequest(bookingData);
 
-  const onTimeChange = (event, selectedTime) => {
-    setShowTimePicker(false);
-    if (selectedTime) setDepartureTime(selectedTime);
-  };
+			if (response?.success) {
+				Alert.alert(
+					'Thành công',
+					'Yêu cầu đặt xe đã được tạo thành công!',
+					[
+						{
+							text: 'OK',
+							onPress: () => navigation.navigate('Home'),
+						},
+					]
+				);
+			} else {
+				Alert.alert('Lỗi', response?.message || 'Không thể tạo yêu cầu đặt xe');
+			}
+		} catch (error) {
+			console.error('Create booking error:', error);
+			Alert.alert('Lỗi', error.message || 'Có lỗi xảy ra khi tạo yêu cầu');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-  // Render function with error boundary
-  const renderContent = () => {
-    try {
-      return (
-        <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="chevron-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đặt xe</Text>
-      </View>
+	const combineDateAndTime = (date, time) => {
+		const combined = new Date(date);
+		combined.setHours(time.getHours());
+		combined.setMinutes(time.getMinutes());
+		combined.setSeconds(0);
+		combined.setMilliseconds(0);
+		return combined;
+	};
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Location Inputs */}
-        <View style={styles.locationContainer}>
-          {/* Start Location Autocomplete */}
-          <View style={{ height: 60, marginBottom: 8 }}>
-            {!googleApiError ? (
-              <GooglePlacesAutocomplete
-                placeholder="Điểm khởi hành"
-                fetchDetails={true}
-                onPress={(data, details = null) => {
-                  console.log('🔍 Start location selected:', { data, details });
-                  try {
-                    if (details && details.formatted_address && details.geometry && details.geometry.location) {
-                      setStartLocation(details.formatted_address);
-                      setStartCoordinates({
-                        lat: details.geometry.location.lat,
-                        lng: details.geometry.location.lng,
-                      });
-                    } else {
-                      console.warn('⚠️ Invalid details from Google Places:', details);
-                      setStartLocation(data.description || data.structured_formatting?.main_text || 'Không xác định');
-                      // Use default coordinates if details are invalid
-                      setStartCoordinates({ lat: 10.7631, lng: 106.6814 });
-                    }
-                  } catch (error) {
-                    console.error('❌ Error processing start location:', error);
-                    setGoogleApiError(true);
-                    setStartLocation(data.description || 'Lỗi chọn địa điểm');
-                    setStartCoordinates({ lat: 10.7631, lng: 106.6814 });
-                  }
-                }}
-                onFail={(error) => {
-                  console.error('❌ Google Places API error:', error);
-                  setGoogleApiError(true);
-                }}
-                onNotFound={() => {
-                  console.warn('⚠️ No results found');
-                }}
-                query={{
-                  key: 'AIzaSyCa3JX22GNbcCrdmdCditNQX9sz9NjCEcM',
-                  language: 'vi',
-                  components: 'country:vn',
-                }}
-                styles={{
-                  textInput: {
-                    height: 44,
-                    borderRadius: 8,
-                    borderColor: '#E0E0E0',
-                    borderWidth: 1,
-                    paddingHorizontal: 10,
-                    fontSize: 16,
-                  },
-                }}
-                enablePoweredByContainer={false}
-                debounce={300}
-                nearbyPlacesAPI="GooglePlacesSearch"
-                textInputProps={{
-                  value: startLocation,
-                  onChangeText: (text) => setStartLocation(text),
-                }}
-              />
-            ) : (
-              <TextInput
-                style={{
-                  height: 44,
-                  borderRadius: 8,
-                  borderColor: '#E0E0E0',
-                  borderWidth: 1,
-                  paddingHorizontal: 10,
-                  fontSize: 16,
-                }}
-                placeholder="Điểm khởi hành (Nhập thủ công)"
-                value={startLocation}
-                onChangeText={setStartLocation}
-              />
-            )}
-          </View>
-          {/* Start Location Map */}
-          <MapView
-            style={{ height: 120, borderRadius: 12, marginBottom: 12 }}
-            region={{
-              latitude: startCoordinates.lat,
-              longitude: startCoordinates.lng,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            <Marker
-              coordinate={{
-                latitude: startCoordinates.lat,
-                longitude: startCoordinates.lng,
-              }}
-              title="Điểm khởi hành"
-              description={startLocation}
-            />
-          </MapView>
-          {/* End Location Autocomplete */}
-          <View style={{ height: 60, marginBottom: 8 }}>
-            {!googleApiError ? (
-              <GooglePlacesAutocomplete
-                placeholder="Điểm đến"
-                fetchDetails={true}
-                onPress={(data, details = null) => {
-                  console.log('🔍 End location selected:', { data, details });
-                  try {
-                    if (details && details.formatted_address && details.geometry && details.geometry.location) {
-                      setEndLocation(details.formatted_address);
-                      setEndCoordinates({
-                        lat: details.geometry.location.lat,
-                        lng: details.geometry.location.lng,
-                      });
-                    } else {
-                      console.warn('⚠️ Invalid details from Google Places:', details);
-                      setEndLocation(data.description || data.structured_formatting?.main_text || 'Không xác định');
-                      // Use default coordinates if details are invalid
-                      setEndCoordinates({ lat: 10.7951, lng: 106.7218 });
-                    }
-                  } catch (error) {
-                    console.error('❌ Error processing end location:', error);
-                    setGoogleApiError(true);
-                    setEndLocation(data.description || 'Lỗi chọn địa điểm');
-                    setEndCoordinates({ lat: 10.7951, lng: 106.7218 });
-                  }
-                }}
-                onFail={(error) => {
-                  console.error('❌ Google Places API error:', error);
-                  setGoogleApiError(true);
-                }}
-                onNotFound={() => {
-                  console.warn('⚠️ No results found');
-                }}
-                query={{
-                  key: 'AIzaSyBrYH7Tkdocmuh9rFvlZ-Iugq3d7ov3_Nc',
-                  language: 'vi',
-                  components: 'country:vn',
-                }}
-                styles={{
-                  textInput: {
-                    height: 44,
-                    borderRadius: 8,
-                    borderColor: '#E0E0E0',
-                    borderWidth: 1,
-                    paddingHorizontal: 10,
-                    fontSize: 16,
-                  },
-                }}
-                enablePoweredByContainer={false}
-                debounce={300}
-                nearbyPlacesAPI="GooglePlacesSearch"
-                textInputProps={{
-                  value: endLocation,
-                  onChangeText: (text) => setEndLocation(text),
-                }}
-              />
-            ) : (
-              <TextInput
-                style={{
-                  height: 44,
-                  borderRadius: 8,
-                  borderColor: '#E0E0E0',
-                  borderWidth: 1,
-                  paddingHorizontal: 10,
-                  fontSize: 16,
-                }}
-                placeholder="Điểm đến (Nhập thủ công)"
-                value={endLocation}
-                onChangeText={setEndLocation}
-              />
-            )}
-          </View>
-          {/* End Location Map */}
-          <MapView
-            style={{ height: 120, borderRadius: 12, marginBottom: 12 }}
-            region={{
-              latitude: endCoordinates.lat,
-              longitude: endCoordinates.lng,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            <Marker
-              coordinate={{
-                latitude: endCoordinates.lat,
-                longitude: endCoordinates.lng,
-              }}
-              title="Điểm đến"
-              description={endLocation}
-            />
-          </MapView>
-        </View>
+	const onDateChange = (event, selectedDate) => {
+		setShowDatePicker(false);
+		if (selectedDate) setDepartureDate(selectedDate);
+	};
 
-        {/* Date & Time */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thời gian khởi hành</Text>
-          <View style={styles.dateTimeRow}>
-            <TouchableOpacity
-              style={styles.dateTimeButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Ionicons name="calendar" size={20} color="#666" />
-              <Text style={styles.dateTimeText}>
-                {departureDate.toLocaleDateString('vi-VN')}
-              </Text>
-            </TouchableOpacity>
+	const onTimeChange = (event, selectedTime) => {
+		setShowTimePicker(false);
+		if (selectedTime) setDepartureTime(selectedTime);
+	};
 
-            <TouchableOpacity
-              style={styles.dateTimeButton}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Ionicons name="time" size={20} color="#666" />
-              <Text style={styles.dateTimeText}>
-                {departureTime.toLocaleTimeString('vi-VN', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+	const isFormValid = () => {
+		return startLocation && endLocation && startCoordinates && endCoordinates;
+	};
 
-        {/* Available Seats */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Số chỗ cần đặt</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nhập số chỗ cần đặt"
-            value={availableSeats}
-            onChangeText={setAvailableSeats}
-            keyboardType="numeric"
-          />
-        </View>
+	return (
+		<SafeAreaView style={styles.container}>
+			{/* Header */}
+			<View style={styles.header}>
+				<TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+					<Ionicons name='chevron-back' size={24} color='white' />
+				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Đặt xe</Text>
+			</View>
 
-        {/* Max Price */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Giá tối đa (VND)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nhập giá tối đa bạn chấp nhận (tùy chọn)"
-            value={maxPrice}
-            onChangeText={setMaxPrice}
-            keyboardType="numeric"
-          />
-          {estimatedPrice && (
-            <Text style={styles.priceHint}>
-              Giá ước tính: {estimatedPrice.estimatedPrice?.toLocaleString('vi-VN')} VND
-            </Text>
-          )}
-        </View>
+			<ScrollView
+				style={styles.content}
+				showsVerticalScrollIndicator={false}
+				keyboardShouldPersistTaps="handled"
+			>
+				{/* Location Inputs */}
+				<View style={styles.locationContainer}>
+					<Text style={styles.sectionTitle}>📍 Địa điểm</Text>
 
-        {/* Vehicle Type */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Loại xe</Text>
-          <View style={styles.vehicleTypes}>
-            {(vehicleTypes || []).map((vehicle) => (
-              <TouchableOpacity
-                key={vehicle.key}
-                style={[
-                  styles.vehicleTypeButton,
-                  vehicleType === vehicle.key && styles.vehicleTypeActive
-                ]}
-                onPress={() => setVehicleType(vehicle.key)}
-              >
-                <Text style={[
-                  styles.vehicleTypeText,
-                  vehicleType === vehicle.key && styles.vehicleTypeTextActive
-                ]}>
-                  {vehicle.name}
-                </Text>
-                <Text style={[
-                  styles.vehicleTypePrice,
-                  vehicleType === vehicle.key && styles.vehicleTypePriceActive
-                ]}>
-                  {vehicle.baseRate?.toLocaleString('vi-VN')} VND/km
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+					{/* Start Location Input */}
+					<View style={styles.inputSection}>
+						<Text style={styles.inputLabel}>Điểm khởi hành</Text>
+						<View style={styles.searchInputRow}>
+							<TextInput
+								style={styles.locationInput}
+								placeholder='Nhập điểm khởi hành...'
+								value={startLocation}
+								onChangeText={setStartLocation}
+								multiline={false}
+								numberOfLines={1}
+							/>
+							<TouchableOpacity
+								style={styles.searchButton}
+								onPress={handleStartSearch}
+								disabled={startSearching}
+							>
+								{startSearching ? (
+									<ActivityIndicator size="small" color="#4285F4" />
+								) : (
+									<Ionicons name="search" size={20} color="#4285F4" />
+								)}
+							</TouchableOpacity>
+						</View>
 
-        {/* Price Estimation */}
-        <View style={styles.section}>
-          <View style={styles.priceHeader}>
-            <Text style={styles.sectionTitle}>Ước tính giá</Text>
-            <TouchableOpacity
-              style={styles.estimateButton}
-              onPress={handleEstimatePrice}
-              disabled={estimating}
-            >
-              {estimating ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.estimateButtonText}>Tính giá</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          
-          {estimatedPrice && (
-            <View style={styles.priceResult}>
-              <Text style={styles.priceValue}>
-                {estimatedPrice.estimatedPrice?.toLocaleString('vi-VN')} VND
-              </Text>
-              <Text style={styles.priceDistance}>
-                Khoảng cách: {estimatedPrice.distance} km
-              </Text>
-            </View>
-          )}
-        </View>
+						{/* Start Suggestions */}
+						{showStartSuggestions && startSuggestions.length > 0 && (
+							<View style={styles.suggestionsList}>
+								<View style={styles.suggestionsHeader}>
+									<Text style={styles.suggestionsHeaderText}>Chọn địa điểm:</Text>
+									<TouchableOpacity
+										style={styles.closeSuggestions}
+										onPress={() => setShowStartSuggestions(false)}
+									>
+										<Ionicons name="close" size={18} color="#666" />
+									</TouchableOpacity>
+								</View>
+								<FlatList
+									data={startSuggestions}
+									keyExtractor={(item, index) => index.toString()}
+									renderItem={({ item }) => (
+										<TouchableOpacity
+											style={styles.suggestionItem}
+											onPress={() => handleStartSuggestionPress(item)}
+											activeOpacity={0.7}
+										>
+											<Ionicons name="location" size={16} color="#666" />
+											<Text style={styles.suggestionText} numberOfLines={2}>
+												{item.place_name}
+											</Text>
+										</TouchableOpacity>
+									)}
+									showsVerticalScrollIndicator={false}
+									keyboardShouldPersistTaps="handled"
+								/>
+							</View>
+						)}
+					</View>
 
-        {/* Notes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ghi chú (tùy chọn)</Text>
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Thêm ghi chú về chuyến đi..."
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={3}
-          />
-        </View>
+					{/* End Location Input */}
+					<View style={styles.inputSection}>
+						<Text style={styles.inputLabel}>Điểm đến</Text>
+						<View style={styles.searchInputRow}>
+							<TextInput
+								style={styles.locationInput}
+								placeholder='Nhập điểm đến...'
+								value={endLocation}
+								onChangeText={setEndLocation}
+								multiline={false}
+								numberOfLines={1}
+							/>
+							<TouchableOpacity
+								style={styles.searchButton}
+								onPress={handleEndSearch}
+								disabled={endSearching}
+							>
+								{endSearching ? (
+									<ActivityIndicator size="small" color="#4285F4" />
+								) : (
+									<Ionicons name="search" size={20} color="#4285F4" />
+								)}
+							</TouchableOpacity>
+						</View>
 
-        {/* Recurring */}
-        <TouchableOpacity
-          style={styles.recurringContainer}
-          onPress={() => setIsRecurring(!isRecurring)}
-        >
-          <Ionicons
-            name={isRecurring ? "checkbox" : "square-outline"}
-            size={20}
-            color="#4285F4"
-          />
-          <Text style={styles.recurringText}>Lặp lại hàng ngày</Text>
-        </TouchableOpacity>
+						{/* End Suggestions */}
+						{showEndSuggestions && endSuggestions.length > 0 && (
+							<View style={styles.suggestionsList}>
+								<View style={styles.suggestionsHeader}>
+									<Text style={styles.suggestionsHeaderText}>Chọn địa điểm:</Text>
+									<TouchableOpacity
+										style={styles.closeSuggestions}
+										onPress={() => setShowEndSuggestions(false)}
+									>
+										<Ionicons name="close" size={18} color="#666" />
+									</TouchableOpacity>
+								</View>
+								<FlatList
+									data={endSuggestions}
+									keyExtractor={(item, index) => index.toString()}
+									renderItem={({ item }) => (
+										<TouchableOpacity
+											style={styles.suggestionItem}
+											onPress={() => handleEndSuggestionPress(item)}
+											activeOpacity={0.7}
+										>
+											<Ionicons name="location" size={16} color="#666" />
+											<Text style={styles.suggestionText} numberOfLines={2}>
+												{item.place_name}
+											</Text>
+										</TouchableOpacity>
+									)}
+									showsVerticalScrollIndicator={false}
+									keyboardShouldPersistTaps="handled"
+								/>
+							</View>
+						)}
+					</View>
 
-        {/* Debug Info */}
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugTitle}>🔍 Debug Info</Text>
-          <Text style={styles.debugText}>Start: {startLocation} {startCoordinates ? '✅' : '❌'}</Text>
-          <Text style={styles.debugText}>End: {endLocation} {endCoordinates ? '✅' : '❌'}</Text>
-          <Text style={styles.debugText}>Seats: {availableSeats}</Text>
-          <Text style={styles.debugText}>Time: {departureDate.toLocaleString('vi-VN')}</Text>
-          <Text style={styles.debugText}>Max Price: {maxPrice || 'Not set'}</Text>
-        </View>
+					{/* Maps for visualization */}
+					{startCoordinates && (
+						<View style={styles.mapContainer}>
+							<Text style={styles.mapTitle}>📍 Điểm khởi hành</Text>
+							<MapView
+								style={styles.map}
+								region={{
+									latitude: startCoordinates.lat,
+									longitude: startCoordinates.lng,
+									latitudeDelta: 0.01,
+									longitudeDelta: 0.01,
+								}}
+							>
+								<Marker
+									coordinate={{
+										latitude: startCoordinates.lat,
+										longitude: startCoordinates.lng,
+									}}
+									title='Điểm khởi hành'
+									description={startLocation}
+								/>
+							</MapView>
+						</View>
+					)}
 
-        {/* Google API Error Notice */}
-        {googleApiError && (
-          <View style={styles.errorNotice}>
-            <Text style={styles.errorNoticeText}>
-              ⚠️ Google Places API gặp lỗi. Bạn có thể nhập địa chỉ thủ công hoặc thử kết nối lại.
-            </Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => setGoogleApiError(false)}
-            >
-              <Text style={styles.retryButtonText}>🔄 Thử lại Google API</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+					{endCoordinates && (
+						<View style={styles.mapContainer}>
+							<Text style={styles.mapTitle}>🏁 Điểm đến</Text>
+							<MapView
+								style={styles.map}
+								region={{
+									latitude: endCoordinates.lat,
+									longitude: endCoordinates.lng,
+									latitudeDelta: 0.01,
+									longitudeDelta: 0.01,
+								}}
+							>
+								<Marker
+									coordinate={{
+										latitude: endCoordinates.lat,
+										longitude: endCoordinates.lng,
+									}}
+									title='Điểm đến'
+									description={endLocation}
+								/>
+							</MapView>
+						</View>
+					)}
 
-        {/* Google API Test */}
-        <TouchableOpacity
-          style={[styles.googleTestButton, loading && styles.disabledButton]}
-          onPress={async () => {
-            try {
-              setLoading(true);
-              console.log('🔍 Testing Google Places API...');
-              
-              // Test Google Places API directly
-              const testUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=Hồ Chí Minh&key=AIzaSyBrYH7Tkdocmuh9rFvlZ-Iugq3d7ov3_Nc&language=vi&components=country:vn`;
-              
-              const response = await fetch(testUrl);
-              const data = await response.json();
-              
-              console.log('🔍 Google Places API response:', data);
-              
-              if (data.status === 'OK' && data.predictions && data.predictions.length > 0) {
-                Alert.alert(
-                  "✅ Google API OK!", 
-                  `Tìm thấy ${data.predictions.length} kết quả.\nFirst result: ${data.predictions[0].description}`
-                );
-              } else if (data.status === 'REQUEST_DENIED') {
-                Alert.alert(
-                  "❌ API Key Invalid!", 
-                  `Google API từ chối: ${data.error_message || 'Key không hợp lệ'}`
-                );
-              } else if (data.status === 'OVER_QUERY_LIMIT') {
-                Alert.alert(
-                  "❌ API Limit!", 
-                  "Đã vượt quá giới hạn query của Google API"
-                );
-              } else {
-                Alert.alert(
-                  "⚠️ API Issue", 
-                  `Status: ${data.status}\nError: ${data.error_message || 'Unknown'}`
-                );
-              }
-            } catch (error) {
-              console.log('❌ Google API test error:', error);
-              Alert.alert(
-                "🚨 Không test được Google API!", 
-                `Lỗi: ${error.message}\n\nKiểm tra:\n1. Kết nối internet\n2. API key hợp lệ\n3. Billing enabled`
-              );
-            } finally {
-              setLoading(false);
-            }
-          }}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.googleTestButtonText}>🗺️ Test Google API</Text>
-          )}
-        </TouchableOpacity>
+					{/* Estimate Price Button */}
+					{isFormValid() && (
+						<TouchableOpacity
+							style={[styles.estimateButton, estimating && styles.disabledButton]}
+							onPress={handleEstimatePrice}
+							disabled={estimating}
+						>
+							{estimating ? (
+								<ActivityIndicator color='white' size='small' />
+							) : (
+								<Text style={styles.estimateButtonText}>💰 Ước tính giá</Text>
+							)}
+						</TouchableOpacity>
+					)}
 
-        {/* Backend Status Check */}
-        <TouchableOpacity
-          style={[styles.checkButton, loading && styles.disabledButton]}
-          onPress={async () => {
-            try {
-              setLoading(true);
-              console.log('🔍 Checking backend status...');
-              const response = await fetch('http://192.168.2.68:5000/api/trips/vehicle-types');
-              
-              if (response.ok) {
-                const data = await response.json();
-                Alert.alert("✅ Backend OK!", "Backend server đang chạy bình thường");
-                console.log('✅ Backend response:', data);
-              } else {
-                Alert.alert("❌ Backend Error", `Status: ${response.status}`);
-              }
-            } catch (error) {
-              console.log('❌ Backend check error:', error);
-              Alert.alert(
-                "🚨 Backend KHÔNG chạy!", 
-                "Hãy start backend:\ncd carpooling-be && npm start"
-              );
-            } finally {
-              setLoading(false);
-            }
-          }}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.checkButtonText}>🔍 Kiểm tra Backend</Text>
-          )}
-        </TouchableOpacity>
+					{/* Estimated Price Display */}
+					{estimatedPrice && (
+						<View style={styles.priceContainer}>
+							<Text style={styles.priceLabel}>Giá ước tính:</Text>
+							<Text style={styles.priceValue}>
+								{estimatedPrice.estimatedPrice?.toLocaleString('vi-VN')} VNĐ
+							</Text>
+						</View>
+					)}
 
-        {/* Test Button */}
-        <TouchableOpacity
-          style={[styles.testButton, loading && styles.disabledButton]}
-          onPress={handleCreateBookingRequestWithTestData}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.testButtonText}>🧪 Test với data mẫu</Text>
-          )}
-        </TouchableOpacity>
+					{/* Route Information */}
+					{estimatedPrice && (
+						<RouteInfo
+							estimatedTime={estimatedPrice.estimatedTime}
+							distance={estimatedPrice.estimatedDistance}
+							startLocation={startLocation}
+							endLocation={endLocation}
+							showDetails={true}
+						/>
+					)}
 
-        {/* Create Button */}
-        <TouchableOpacity
-          style={[styles.createButton, loading && styles.disabledButton]}
-          onPress={handleCreateBookingRequest}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.createButtonText}>Tạo yêu cầu đặt xe</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+					{/* Navigation Button */}
+					{isFormValid() && (
+						<TouchableOpacity
+							style={styles.navigationButton}
+							onPress={() => {
+								navigation.navigate('Navigation', {
+									startLocation,
+									endLocation,
+									startCoordinates,
+									endCoordinates,
+								});
+							}}
+						>
+							<Ionicons name="navigate" size={20} color="white" />
+							<Text style={styles.navigationButtonText}>🗺️ Xem tuyến đường</Text>
+						</TouchableOpacity>
+					)}
+				</View>
 
-      {/* Date/Time Pickers */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={departureDate}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          minimumDate={new Date()}
-        />
-      )}
+				{/* Date & Time */}
+				<View style={styles.section}>
+					<Text style={styles.sectionTitle}>🕒 Thời gian khởi hành</Text>
+					<View style={styles.dateTimeRow}>
+						<TouchableOpacity style={styles.dateTimeButton} onPress={() => setShowDatePicker(true)}>
+							<Ionicons name='calendar' size={20} color='#666' />
+							<Text style={styles.dateTimeText}>{departureDate.toLocaleDateString('vi-VN')}</Text>
+						</TouchableOpacity>
 
-      {showTimePicker && (
-        <DateTimePicker
-          value={departureTime}
-          mode="time"
-          display="default"
-          onChange={onTimeChange}
-        />
-        )}
-      </SafeAreaView>
-    );
-    } catch (error) {
-      console.error('❌ CreateTripScreen render error:', error);
-      return (
-        <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="chevron-back" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Đặt xe</Text>
-          </View>
-          <View style={styles.content}>
-            <View style={styles.errorNotice}>
-              <Text style={styles.errorNoticeText}>
-                ❌ Đã xảy ra lỗi khi tải trang. Vui lòng thử lại.
-              </Text>
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={() => navigation.goBack()}
-              >
-                <Text style={styles.retryButtonText}>🔄 Quay lại</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-      );
-    }
-  };
+						<TouchableOpacity style={styles.dateTimeButton} onPress={() => setShowTimePicker(true)}>
+							<Ionicons name='time' size={20} color='#666' />
+							<Text style={styles.dateTimeText}>
+								{departureTime.toLocaleTimeString('vi-VN', {
+									hour: '2-digit',
+									minute: '2-digit',
+								})}
+							</Text>
+						</TouchableOpacity>
+					</View>
+				</View>
 
-  return renderContent();
+				{/* Vehicle Type */}
+				<View style={styles.section}>
+					<Text style={styles.sectionTitle}>🚗 Loại xe</Text>
+					<View style={styles.vehicleTypes}>
+						{Array.isArray(vehicleTypes) &&
+							vehicleTypes.map((vehicle) => (
+								<TouchableOpacity
+									key={vehicle.key}
+									style={[
+										styles.vehicleTypeButton,
+										vehicleType === vehicle.key && styles.vehicleTypeActive,
+									]}
+									onPress={() => setVehicleType(vehicle.key)}
+								>
+									<Text
+										style={[
+											styles.vehicleTypeText,
+											vehicleType === vehicle.key && styles.vehicleTypeTextActive,
+										]}
+									>
+										{vehicle.name}
+									</Text>
+								</TouchableOpacity>
+							))}
+					</View>
+				</View>
+
+				{/* Additional Options */}
+				<View style={styles.section}>
+					<Text style={styles.sectionTitle}>⚙️ Tùy chọn khác</Text>
+
+					{/* Available Seats */}
+					<View style={styles.inputSection}>
+						<Text style={styles.inputLabel}>Số ghế cần</Text>
+						<TextInput
+							style={styles.textInput}
+							value={availableSeats}
+							onChangeText={setAvailableSeats}
+							keyboardType='numeric'
+							placeholder='Nhập số ghế cần'
+						/>
+					</View>
+
+					{/* Max Price */}
+					<View style={styles.inputSection}>
+						<Text style={styles.inputLabel}>Giá tối đa (VNĐ)</Text>
+						<TextInput
+							style={styles.textInput}
+							value={maxPrice}
+							onChangeText={setMaxPrice}
+							keyboardType='numeric'
+							placeholder='Nhập giá tối đa'
+						/>
+					</View>
+
+					{/* Recurring Trip */}
+					<View style={styles.switchContainer}>
+						<Text style={styles.switchLabel}>Chuyến đi định kỳ</Text>
+						<Switch
+							value={isRecurring}
+							onValueChange={setIsRecurring}
+							trackColor={{ false: '#E0E0E0', true: '#4285F4' }}
+							thumbColor={isRecurring ? '#FFFFFF' : '#FFFFFF'}
+						/>
+					</View>
+
+					{/* Notes */}
+					<View style={styles.inputSection}>
+						<Text style={styles.inputLabel}>Ghi chú</Text>
+						<TextInput
+							style={[styles.textInput, styles.textArea]}
+							value={notes}
+							onChangeText={setNotes}
+							placeholder='Nhập ghi chú (tùy chọn)'
+							multiline
+							numberOfLines={3}
+						/>
+					</View>
+				</View>
+
+				{/* Create Button */}
+				<TouchableOpacity
+					style={[styles.createButton, (!isFormValid() || loading) && styles.disabledButton]}
+					onPress={handleCreateBookingRequest}
+					disabled={!isFormValid() || loading}
+				>
+					{loading ? (
+						<ActivityIndicator color='white' size='small' />
+					) : (
+						<Text style={styles.createButtonText}>🚀 Tạo yêu cầu đặt xe</Text>
+					)}
+				</TouchableOpacity>
+			</ScrollView>
+
+			{/* Date/Time Pickers */}
+			{showDatePicker && (
+				<DateTimePicker
+					value={departureDate}
+					mode='date'
+					display='default'
+					onChange={onDateChange}
+					minimumDate={new Date()}
+				/>
+			)}
+
+			{showTimePicker && (
+				<DateTimePicker value={departureTime} mode='time' display='default' onChange={onTimeChange} />
+			)}
+		</SafeAreaView>
+	);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
-  header: {
-    backgroundColor: "#4285F4",
-    paddingTop: Platform.OS === "ios" ? 44 : 25,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "white",
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  locationContainer: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  locationInput: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-  },
-  section: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 12,
-  },
-  dateTimeRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  dateTimeButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F5F7FA",
-    padding: 12,
-    borderRadius: 8,
-  },
-  dateTimeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: "#333",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  vehicleTypes: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  vehicleTypeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    backgroundColor: "#F5F7FA",
-    minWidth: 120,
-  },
-  vehicleTypeActive: {
-    backgroundColor: "#4285F4",
-    borderColor: "#4285F4",
-  },
-  vehicleTypeText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
-    textAlign: "center",
-  },
-  vehicleTypeTextActive: {
-    color: "white",
-  },
-  vehicleTypePrice: {
-    fontSize: 11,
-    color: "#999",
-    textAlign: "center",
-    marginTop: 4,
-  },
-  vehicleTypePriceActive: {
-    color: "rgba(255,255,255,0.8)",
-  },
-  priceHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  estimateButton: {
-    backgroundColor: "#FF9800",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  estimateButtonText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  priceResult: {
-    backgroundColor: "#E8F5E8",
-    padding: 12,
-    borderRadius: 8,
-  },
-  priceValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1B5E20",
-  },
-  priceDistance: {
-    fontSize: 12,
-    color: "#4CAF50",
-    marginTop: 4,
-  },
-  notesInput: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    height: 80,
-    textAlignVertical: "top",
-  },
-  recurringContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  recurringText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#333",
-  },
-  googleTestButton: {
-    backgroundColor: "#FF5722",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  googleTestButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  checkButton: {
-    backgroundColor: "#9C27B0",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  checkButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  testButton: {
-    backgroundColor: "#FF9800",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  testButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  createButton: {
-    backgroundColor: "#4285F4",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  createButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  priceHint: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 8,
-    fontStyle: "italic",
-  },
-  debugContainer: {
-    backgroundColor: "#f0f0f0",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  debugTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  debugText: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-  },
-  errorNotice: {
-    backgroundColor: "#FFF3CD",
-    borderColor: "#FFEAA7",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorNoticeText: {
-    fontSize: 14,
-    color: "#856404",
-    marginBottom: 8,
-  },
-  retryButton: {
-    backgroundColor: "#FFC107",
-    padding: 8,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  retryButtonText: {
-    color: "#212529",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-}); 
+	container: {
+		flex: 1,
+		backgroundColor: '#F5F7FA',
+	},
+	header: {
+		backgroundColor: '#4285F4',
+		paddingTop: Platform.OS === 'ios' ? 44 : 25,
+		paddingBottom: 16,
+		paddingHorizontal: 16,
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	backButton: {
+		marginRight: 16,
+	},
+	headerTitle: {
+		fontSize: 18,
+		fontWeight: '600',
+		color: 'white',
+	},
+	content: {
+		flex: 1,
+		padding: 16,
+	},
+	locationContainer: {
+		backgroundColor: 'white',
+		borderRadius: 12,
+		padding: 16,
+		marginBottom: 16,
+	},
+	section: {
+		backgroundColor: 'white',
+		borderRadius: 12,
+		padding: 16,
+		marginBottom: 16,
+	},
+	sectionTitle: {
+		fontSize: 16,
+		fontWeight: '600',
+		color: '#333',
+		marginBottom: 12,
+	},
+	inputSection: {
+		marginBottom: 16,
+	},
+	inputLabel: {
+		fontSize: 14,
+		fontWeight: '500',
+		color: '#666',
+		marginBottom: 8,
+	},
+	// Location Input styles
+	locationInputContainer: {
+		position: 'relative',
+		zIndex: 1000,
+	},
+	searchInputRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		borderWidth: 1,
+		borderColor: '#E0E0E0',
+		borderRadius: 8,
+		backgroundColor: '#FFF',
+	},
+	locationInput: {
+		flex: 1,
+		height: 44,
+		paddingHorizontal: 12,
+		fontSize: 16,
+	},
+	searchButton: {
+		padding: 12,
+		borderLeftWidth: 1,
+		borderLeftColor: '#E0E0E0',
+	},
+	suggestionsList: {
+		position: 'absolute',
+		top: 46,
+		left: 0,
+		right: 0,
+		backgroundColor: 'white',
+		borderWidth: 1,
+		borderColor: '#E0E0E0',
+		borderRadius: 8,
+		maxHeight: 250,
+		zIndex: 1001,
+		elevation: 5,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.25,
+		shadowRadius: 3.84,
+	},
+	suggestionsHeader: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		padding: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: '#F0F0F0',
+		backgroundColor: '#F8F9FA',
+	},
+	suggestionsHeaderText: {
+		fontSize: 12,
+		fontWeight: '500',
+		color: '#666',
+	},
+	closeSuggestions: {
+		padding: 4,
+	},
+	suggestionItem: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		padding: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: '#F0F0F0',
+	},
+	suggestionText: {
+		fontSize: 14,
+		color: '#333',
+		marginLeft: 8,
+		flex: 1,
+	},
+	mapContainer: {
+		marginBottom: 12,
+	},
+	mapTitle: {
+		fontSize: 14,
+		fontWeight: '500',
+		color: '#666',
+		marginBottom: 8,
+	},
+	map: {
+		height: 120,
+		borderRadius: 12,
+	},
+	textInput: {
+		height: 44,
+		borderWidth: 1,
+		borderColor: '#E0E0E0',
+		borderRadius: 8,
+		paddingHorizontal: 12,
+		fontSize: 16,
+		backgroundColor: '#FFF',
+	},
+	textArea: {
+		height: 80,
+		paddingTop: 12,
+		paddingBottom: 12,
+		textAlignVertical: 'top',
+	},
+	switchContainer: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		marginBottom: 16,
+	},
+	switchLabel: {
+		fontSize: 14,
+		fontWeight: '500',
+		color: '#666',
+	},
+	estimateButton: {
+		backgroundColor: '#34A853',
+		padding: 14,
+		borderRadius: 8,
+		alignItems: 'center',
+		marginTop: 8,
+	},
+	estimateButtonText: {
+		color: 'white',
+		fontSize: 14,
+		fontWeight: '600',
+	},
+	priceContainer: {
+		backgroundColor: '#F8F9FA',
+		padding: 12,
+		borderRadius: 8,
+		marginTop: 8,
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+	},
+	priceLabel: {
+		fontSize: 14,
+		fontWeight: '500',
+		color: '#666',
+	},
+	priceValue: {
+		fontSize: 16,
+		fontWeight: '600',
+		color: '#34A853',
+	},
+	dateTimeRow: {
+		flexDirection: 'row',
+		gap: 12,
+	},
+	dateTimeButton: {
+		flex: 1,
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#F5F7FA',
+		padding: 12,
+		borderRadius: 8,
+	},
+	dateTimeText: {
+		marginLeft: 8,
+		fontSize: 14,
+		color: '#333',
+	},
+	vehicleTypes: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
+	},
+	vehicleTypeButton: {
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		borderWidth: 1,
+		borderColor: '#E0E0E0',
+		borderRadius: 8,
+		backgroundColor: '#F5F7FA',
+		minWidth: 120,
+	},
+	vehicleTypeActive: {
+		backgroundColor: '#4285F4',
+		borderColor: '#4285F4',
+	},
+	vehicleTypeText: {
+		fontSize: 14,
+		fontWeight: '600',
+		color: '#666',
+		textAlign: 'center',
+	},
+	vehicleTypeTextActive: {
+		color: 'white',
+	},
+	createButton: {
+		backgroundColor: '#4285F4',
+		padding: 16,
+		borderRadius: 12,
+		alignItems: 'center',
+		marginBottom: 32,
+	},
+	disabledButton: {
+		opacity: 0.6,
+	},
+	createButtonText: {
+		color: 'white',
+		fontSize: 16,
+		fontWeight: '600',
+	},
+	navigationButton: {
+		backgroundColor: '#FF6B35',
+		padding: 12,
+		borderRadius: 8,
+		alignItems: 'center',
+		marginTop: 8,
+		flexDirection: 'row',
+		justifyContent: 'center',
+		gap: 8,
+	},
+	navigationButtonText: {
+		color: 'white',
+		fontSize: 14,
+		fontWeight: '600',
+	},
+});

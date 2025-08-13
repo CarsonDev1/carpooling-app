@@ -41,6 +41,7 @@ import WaitingForDriverScreen from "../screens/WaitingForDriverScreen";
 import DriverRegistrationScreen from "../screens/DriverRegistrationScreen";
 import DriverRequestsScreen from "../screens/DriverRequestsScreen";
 import PaymentSuccessScreen from "../screens/PaymentSuccessScreen";
+import NavigationScreen from '../screens/NavigationScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -142,7 +143,7 @@ const HomeStack = () => {
         component={TripInProgressScreen}
         options={{ title: "Đang di chuyển", headerShown: false }}
       />
-     
+
       <Stack.Screen
         name="WaitingForDriver"
         component={WaitingForDriverScreen}
@@ -162,6 +163,14 @@ const HomeStack = () => {
         name="PaymentSuccess"
         component={PaymentSuccessScreen}
         options={{ title: "Thanh toán thành công", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Navigation"
+        component={NavigationScreen}
+        options={{
+          title: "Điều hướng",
+          headerShown: false
+        }}
       />
     </Stack.Navigator>
   );
