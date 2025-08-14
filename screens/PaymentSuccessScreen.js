@@ -13,11 +13,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 export default function PaymentSuccessScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   const { tripId, amount, transactionNo } = route.params || {};
 
   const handleGoToTripDetail = () => {
-    navigation.navigate('TripDetail', { tripId });
+    navigation.navigate('TripInProgress', { tripId });
   };
 
   const handleBackToHome = () => {
@@ -27,7 +27,7 @@ export default function PaymentSuccessScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Thanh toán thành công</Text>
@@ -48,7 +48,7 @@ export default function PaymentSuccessScreen() {
         {/* Payment Details */}
         <View style={styles.detailsCard}>
           <Text style={styles.detailsTitle}>Chi tiết thanh toán</Text>
-          
+
           {amount && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Số tiền:</Text>
@@ -57,21 +57,21 @@ export default function PaymentSuccessScreen() {
               </Text>
             </View>
           )}
-          
+
           {transactionNo && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Mã giao dịch:</Text>
               <Text style={styles.detailValue}>{transactionNo}</Text>
             </View>
           )}
-          
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Trạng thái:</Text>
             <Text style={[styles.detailValue, styles.successValue]}>
               Thành công
             </Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Thời gian:</Text>
             <Text style={styles.detailValue}>
@@ -112,12 +112,12 @@ export default function PaymentSuccessScreen() {
         >
           <Text style={styles.secondaryBtnText}>Về trang chủ</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={styles.primaryBtn}
           onPress={handleGoToTripDetail}
         >
-          <Text style={styles.primaryBtnText}>Xem chi tiết chuyến đi</Text>
+          <Text style={styles.primaryBtnText}>Theo dõi chuyến đi</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
-  
+
   header: {
     backgroundColor: '#4CAF50',
     paddingTop: StatusBar.currentHeight || 44,

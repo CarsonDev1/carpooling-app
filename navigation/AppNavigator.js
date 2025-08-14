@@ -40,8 +40,13 @@ import CreateTripScreen from "../screens/CreateTripScreen";
 import WaitingForDriverScreen from "../screens/WaitingForDriverScreen";
 import DriverRegistrationScreen from "../screens/DriverRegistrationScreen";
 import DriverRequestsScreen from "../screens/DriverRequestsScreen";
+import DriverHomeScreen from "../screens/DriverHomeScreen";
+import DriverProfileScreen from "../screens/DriverProfileScreen";
+import DriverEarningsScreen from "../screens/DriverEarningsScreen";
+import DriverHistoryScreen from "../screens/DriverHistoryScreen";
 import PaymentSuccessScreen from "../screens/PaymentSuccessScreen";
 import NavigationScreen from '../screens/NavigationScreen';
+import WalletScreen from "../screens/WalletScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -160,6 +165,26 @@ const HomeStack = () => {
         options={{ title: "Yêu cầu chuyến đi", headerShown: false }}
       />
       <Stack.Screen
+        name="DriverHome"
+        component={DriverHomeScreen}
+        options={{ title: "Tài xế", headerShown: false }}
+      />
+      <Stack.Screen
+        name="DriverProfile"
+        component={DriverProfileScreen}
+        options={{ title: "Hồ sơ tài xế", headerShown: false }}
+      />
+      <Stack.Screen
+        name="DriverEarnings"
+        component={DriverEarningsScreen}
+        options={{ title: "Thu nhập tài xế", headerShown: false }}
+      />
+      <Stack.Screen
+        name="DriverHistory"
+        component={DriverHistoryScreen}
+        options={{ title: "Lịch sử tài xế", headerShown: false }}
+      />
+      <Stack.Screen
         name="PaymentSuccess"
         component={PaymentSuccessScreen}
         options={{ title: "Thanh toán thành công", headerShown: false }}
@@ -171,6 +196,11 @@ const HomeStack = () => {
           title: "Điều hướng",
           headerShown: false
         }}
+      />
+      <Stack.Screen
+        name="Wallet"
+        component={WalletScreen}
+        options={{ title: "Ví điện tử", headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -300,6 +330,29 @@ const NotificationsStack = () => {
   );
 };
 
+// Wallet Stack Navigator
+const WalletStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: "#4285F4",
+        },
+        headerTintColor: "white",
+        headerTitleStyle: {
+          fontWeight: "bold",
+        },
+      }}
+    >
+      <Stack.Screen
+        name="WalletMain"
+        component={WalletScreen}
+        options={{ title: "Ví điện tử" }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 // Main Tab Navigator
 const MainTabs = () => {
   return (
@@ -314,6 +367,8 @@ const MainTabs = () => {
             iconName = "home";
           } else if (route.name === "History") {
             iconName = "history";
+          } else if (route.name === "Wallet") {
+            iconName = "account-balance-wallet";
           } else if (route.name === "Notifications") {
             iconName = "notifications";
           } else if (route.name === "Profile") {
@@ -349,6 +404,11 @@ const MainTabs = () => {
         name="History"
         component={HistoryStack}
         options={{ tabBarLabel: "Lịch sử" }}
+      />
+      <Tab.Screen
+        name="Wallet"
+        component={WalletStack}
+        options={{ tabBarLabel: "Ví" }}
       />
       <Tab.Screen
         name="Notifications"

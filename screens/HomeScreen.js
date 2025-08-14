@@ -12,11 +12,13 @@ import {
   Image,
   Animated,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import { getCurrentUser } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { getMyJoinedTrips, getMyTrips } from "../api/tripsApi";
+import { getWalletBalance } from "../api/walletApi";
 
 // Sau đó mới có các constants và components
 const { width: screenWidth } = Dimensions.get("window");
@@ -121,10 +123,28 @@ const DriverFrame = () => {
   const handleDriverPress = () => {
     // Check if user is already a driver
     const isDriver = user?.role === 'driver' || user?.role === 'both';
-    
+
     if (isDriver) {
-      // Navigate to requests screen for drivers
-      navigation.navigate("DriverRequests");
+      // Show options for existing drivers
+      Alert.alert(
+        'Chế độ tài xế',
+        'Chọn hành động:',
+        [
+          {
+            text: 'Xem yêu cầu',
+            onPress: () => navigation.navigate("DriverRequests"),
+          },
+          {
+            text: 'Chuyển sang Driver mode',
+            onPress: () => navigation.navigate("DriverHome"),
+            style: 'default',
+          },
+          {
+            text: 'Hủy',
+            style: 'cancel',
+          },
+        ]
+      );
     } else {
       // Navigate to driver registration
       navigation.navigate("DriverRegistration");
@@ -161,12 +181,15 @@ export default function HomeScreen() {
   const [userData, setUserData] = useState(null);
   const [upcomingTrips, setUpcomingTrips] = useState([]);
   const [tripsLoading, setTripsLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const { logout } = useAuth();
   const navigation = useNavigation();
 
   useEffect(() => {
     fetchUserData();
     fetchUpcomingTrips();
+    fetchWalletBalance();
   }, []);
 
   const fetchUserData = async () => {
@@ -178,24 +201,55 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
-      Alert.alert("Lỗi", "Không thể lấy thông tin người dùng");
+      // Don't show alert for network errors, just log
+      if (error.response?.status === 429) {
+        console.log("Rate limited, will retry later");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await getWalletBalance();
+      if (response?.success) {
+        setWalletBalance(response.data.balance || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+      // Don't show error to user, just keep 0 balance
+      setWalletBalance(0);
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await Promise.all([
+        fetchUserData(),
+        fetchUpcomingTrips(),
+        fetchWalletBalance(),
+      ]);
+    } catch (error) {
+      console.error("Error during refresh:", error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
   const fetchUpcomingTrips = async () => {
     try {
       setTripsLoading(true);
-      
+
       // Get both my trips (as driver) and joined trips (as passenger)
       const [myTripsResponse, joinedTripsResponse] = await Promise.all([
-        getMyTrips({ 
+        getMyTrips({
           status: 'scheduled',
           fromDate: new Date().toISOString(),
           limit: 5
         }).catch(() => ({ data: [] })),
-        getMyJoinedTrips({ 
+        getMyJoinedTrips({
           status: 'scheduled',
           fromDate: new Date().toISOString(),
           limit: 5
@@ -218,6 +272,7 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Error fetching trips:", error);
       // Don't show error to user, just keep empty array
+      setUpcomingTrips([]);
     } finally {
       setTripsLoading(false);
     }
@@ -226,16 +281,16 @@ export default function HomeScreen() {
   const formatTripForDisplay = (trip) => {
     const departureDate = new Date(trip.departureTime);
     const formattedDate = `${departureDate.getDate()}/${departureDate.getMonth() + 1}`;
-    const formattedTime = departureDate.toLocaleTimeString('vi-VN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    const formattedTime = departureDate.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
 
     // Truncate long addresses
     const truncateAddress = (address, maxLength = 20) => {
       if (!address) return "";
-      return address.length > maxLength ? 
-        address.substring(0, maxLength) + "..." : 
+      return address.length > maxLength ?
+        address.substring(0, maxLength) + "..." :
         address;
     };
 
@@ -295,12 +350,36 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.welcomeSection}>
           <Image
             source={require("../assets/img-header-main.png")}
             style={styles.imageHeaderMain}
           />
+
+          {/* Wallet Info */}
+          <View style={styles.walletInfo}>
+            <TouchableOpacity
+              style={styles.walletCard}
+              onPress={() => navigation.navigate("Wallet")}
+            >
+              <View style={styles.walletLeft}>
+                <Text style={styles.walletIcon}>💰</Text>
+                <Text style={styles.walletLabel}>Ví điện tử</Text>
+              </View>
+              <View style={styles.walletRight}>
+                <Text style={styles.walletBalance}>
+                  {walletBalance ? walletBalance.toLocaleString('vi-VN') : '0'} VNĐ
+                </Text>
+                <Text style={styles.walletAction}>Nhấn để xem chi tiết ›</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.sectionMain}>
@@ -343,8 +422,8 @@ export default function HomeScreen() {
                         trip.status === "Đã ghép nối"
                           ? styles.mainStatusSuccess
                           : trip.status === "Đang chờ xác nhận"
-                          ? styles.mainStatusPending
-                          : styles.mainStatusDefault,
+                            ? styles.mainStatusPending
+                            : styles.mainStatusDefault,
                       ]}
                     >
                       {trip.status}
@@ -722,5 +801,52 @@ const styles = StyleSheet.create({
   },
   mainStatusPending: {
     color: "#dc3545",
+  },
+  walletInfo: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  walletCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+    minWidth: 200,
+  },
+  walletLeft: {
+    alignItems: "center",
+    marginRight: 12,
+  },
+  walletIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  walletLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
+  },
+  walletRight: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  walletBalance: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2C3E50",
+    marginBottom: 4,
+  },
+  walletAction: {
+    fontSize: 10,
+    color: "#4285F4",
+    fontWeight: "500",
   },
 });

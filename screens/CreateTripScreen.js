@@ -24,6 +24,7 @@ import { createBookingRequest, estimatePrice, getVehicleTypes } from '../api/tri
 import { useAuth } from '../context/AuthContext';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import RouteInfo from '../components/RouteInfo';
+import VehicleTypeSelector from '../components/VehicleTypeSelector';
 
 const { width, height } = Dimensions.get('window');
 
@@ -81,16 +82,70 @@ export default function CreateTripScreen() {
 				}));
 				setVehicleTypes(typesArray);
 			} else {
+				// Fallback data với đầy đủ thông tin
 				setVehicleTypes([
-					{ key: 'car', name: 'Ô tô', baseRate: 10000 },
-					{ key: 'motorbike', name: 'Xe máy', baseRate: 5000 },
+					{
+						key: 'motorcycle',
+						name: 'Xe máy',
+						baseRate: 5000,
+						description: 'Phù hợp cho 1-2 người, chi phí thấp',
+						maxPassengers: 2
+					},
+					{
+						key: 'car',
+						name: 'Ô tô',
+						baseRate: 10000,
+						description: 'Phù hợp cho gia đình nhỏ hoặc nhóm 3-4 người',
+						maxPassengers: 4
+					},
+					{
+						key: 'suv',
+						name: 'SUV/MPV',
+						baseRate: 12000,
+						description: 'Phù hợp cho nhóm 5-7 người và khoảng trống cho hành lý',
+						maxPassengers: 7
+					},
+					{
+						key: 'luxury',
+						name: 'Xe sang',
+						baseRate: 15000,
+						description: 'Trải nghiệm cao cấp với xe hiện đại và thoải mái',
+						maxPassengers: 4
+					}
 				]);
 			}
 		} catch (error) {
 			console.error('Error loading vehicle types:', error);
+			// Fallback data với đầy đủ thông tin
 			setVehicleTypes([
-				{ key: 'car', name: 'Ô tô', baseRate: 10000 },
-				{ key: 'motorbike', name: 'Xe máy', baseRate: 5000 },
+				{
+					key: 'motorcycle',
+					name: 'Xe máy',
+					baseRate: 5000,
+					description: 'Phù hợp cho 1-2 người, chi phí thấp',
+					maxPassengers: 2
+				},
+				{
+					key: 'car',
+					name: 'Ô tô',
+					baseRate: 10000,
+					description: 'Phù hợp cho gia đình nhỏ hoặc nhóm 3-4 người',
+					maxPassengers: 4
+				},
+				{
+					key: 'suv',
+					name: 'SUV/MPV',
+					baseRate: 12000,
+					description: 'Phù hợp cho nhóm 5-7 người và khoảng trống cho hành lý',
+					maxPassengers: 7
+				},
+				{
+					key: 'luxury',
+					name: 'Xe sang',
+					baseRate: 15000,
+					description: 'Trải nghiệm cao cấp với xe hiện đại và thoải mái',
+					maxPassengers: 4
+				}
 			]);
 		}
 	};
@@ -174,7 +229,16 @@ export default function CreateTripScreen() {
 			};
 
 			const response = await estimatePrice(priceData);
-			setEstimatedPrice(response.data);
+
+			// Thêm thông tin baseRate từ loại xe hiện tại
+			const currentVehicle = vehicleTypes.find(v => v.key === vehicleType);
+			const enhancedPriceData = {
+				...response.data,
+				baseRate: currentVehicle?.baseRate || 10000,
+				vehicleType: vehicleType
+			};
+
+			setEstimatedPrice(enhancedPriceData);
 		} catch (error) {
 			Alert.alert('Lỗi', error.message || 'Không thể ước tính giá');
 		} finally {
@@ -213,7 +277,8 @@ export default function CreateTripScreen() {
 				vehicleType,
 				availableSeats: parseInt(availableSeats),
 				notes,
-				maxPrice: parseInt(maxPrice),
+				maxPrice: estimatedPrice && estimatedPrice.estimatedPrice ?
+					Math.round(estimatedPrice.estimatedPrice * 1.2) : parseInt(maxPrice),
 				isRecurring,
 			};
 
@@ -221,12 +286,15 @@ export default function CreateTripScreen() {
 
 			if (response?.success) {
 				Alert.alert(
-					'Thành công',
-					'Yêu cầu đặt xe đã được tạo thành công!',
+					'🎉 Đặt xe thành công!',
+					'Yêu cầu đặt xe đã được tạo. Đang tìm kiếm tài xế...',
 					[
 						{
-							text: 'OK',
-							onPress: () => navigation.navigate('Home'),
+							text: 'Chờ tài xế',
+							onPress: () => navigation.navigate('WaitingForDriver', {
+								tripId: response.data._id,
+								bookingData: response.data
+							}),
 						},
 					]
 				);
@@ -262,6 +330,35 @@ export default function CreateTripScreen() {
 
 	const isFormValid = () => {
 		return startLocation && endLocation && startCoordinates && endCoordinates;
+	};
+
+	const handleVehicleTypeChange = (newVehicleType) => {
+		setVehicleType(newVehicleType);
+
+		// Nếu đã có giá ước tính, tự động cập nhật giá theo loại xe mới
+		if (estimatedPrice && estimatedPrice.estimatedPrice) {
+			// Tìm thông tin loại xe mới
+			const newVehicle = vehicleTypes.find(v => v.key === newVehicleType);
+			if (newVehicle && newVehicle.baseRate) {
+				// Tính toán giá mới dựa trên loại xe
+				const currentBaseRate = estimatedPrice.baseRate || 10000;
+				const rateRatio = newVehicle.baseRate / currentBaseRate;
+
+				const newPrice = Math.round(estimatedPrice.estimatedPrice * rateRatio);
+
+				// Cập nhật giá mới
+				setEstimatedPrice({
+					...estimatedPrice,
+					estimatedPrice: newPrice,
+					baseRate: newVehicle.baseRate,
+					vehicleType: newVehicleType
+				});
+			}
+		}
+	};
+
+	const handlePriceUpdate = (newPriceData) => {
+		setEstimatedPrice(newPriceData);
 	};
 
 	return (
@@ -465,15 +562,7 @@ export default function CreateTripScreen() {
 						</TouchableOpacity>
 					)}
 
-					{/* Estimated Price Display */}
-					{estimatedPrice && (
-						<View style={styles.priceContainer}>
-							<Text style={styles.priceLabel}>Giá ước tính:</Text>
-							<Text style={styles.priceValue}>
-								{estimatedPrice.estimatedPrice?.toLocaleString('vi-VN')} VNĐ
-							</Text>
-						</View>
-					)}
+					{/* Estimated Price Display - Moved to VehicleTypeSelector */}
 
 					{/* Route Information */}
 					{estimatedPrice && (
@@ -526,31 +615,15 @@ export default function CreateTripScreen() {
 					</View>
 				</View>
 
-				{/* Vehicle Type */}
+				{/* Vehicle Type Selector */}
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>🚗 Loại xe</Text>
-					<View style={styles.vehicleTypes}>
-						{Array.isArray(vehicleTypes) &&
-							vehicleTypes.map((vehicle) => (
-								<TouchableOpacity
-									key={vehicle.key}
-									style={[
-										styles.vehicleTypeButton,
-										vehicleType === vehicle.key && styles.vehicleTypeActive,
-									]}
-									onPress={() => setVehicleType(vehicle.key)}
-								>
-									<Text
-										style={[
-											styles.vehicleTypeText,
-											vehicleType === vehicle.key && styles.vehicleTypeTextActive,
-										]}
-									>
-										{vehicle.name}
-									</Text>
-								</TouchableOpacity>
-							))}
-					</View>
+					<VehicleTypeSelector
+						vehicleTypes={vehicleTypes}
+						selectedVehicleType={vehicleType}
+						onVehicleTypeChange={handleVehicleTypeChange}
+						estimatedPrice={estimatedPrice}
+						onPriceUpdate={handlePriceUpdate}
+					/>
 				</View>
 
 				{/* Additional Options */}
@@ -569,17 +642,20 @@ export default function CreateTripScreen() {
 						/>
 					</View>
 
-					{/* Max Price */}
-					<View style={styles.inputSection}>
-						<Text style={styles.inputLabel}>Giá tối đa (VNĐ)</Text>
-						<TextInput
-							style={styles.textInput}
-							value={maxPrice}
-							onChangeText={setMaxPrice}
-							keyboardType='numeric'
-							placeholder='Nhập giá tối đa'
-						/>
-					</View>
+					{/* Max Price - Tự động tính từ giá ước tính */}
+					{estimatedPrice && estimatedPrice.estimatedPrice && (
+						<View style={styles.inputSection}>
+							<Text style={styles.inputLabel}>Giá tối đa (VNĐ)</Text>
+							<View style={styles.maxPriceDisplay}>
+								<Text style={styles.maxPriceValue}>
+									{Math.round(estimatedPrice.estimatedPrice * 1.2).toLocaleString('vi-VN')} VNĐ
+								</Text>
+								<Text style={styles.maxPriceNote}>
+									(Tự động: 120% giá ước tính)
+								</Text>
+							</View>
+						</View>
+					)}
 
 					{/* Recurring Trip */}
 					<View style={styles.switchContainer}>
@@ -848,32 +924,23 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: '#333',
 	},
-	vehicleTypes: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 8,
-	},
-	vehicleTypeButton: {
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderWidth: 1,
-		borderColor: '#E0E0E0',
+	// Vehicle type styles moved to VehicleTypeSelector component
+	maxPriceDisplay: {
+		backgroundColor: '#F8F9FA',
+		padding: 12,
 		borderRadius: 8,
-		backgroundColor: '#F5F7FA',
-		minWidth: 120,
+		alignItems: 'center',
 	},
-	vehicleTypeActive: {
-		backgroundColor: '#4285F4',
-		borderColor: '#4285F4',
+	maxPriceValue: {
+		fontSize: 18,
+		fontWeight: '700',
+		color: '#34A853',
+		marginBottom: 4,
 	},
-	vehicleTypeText: {
-		fontSize: 14,
-		fontWeight: '600',
-		color: '#666',
+	maxPriceNote: {
+		fontSize: 12,
+		color: '#999',
 		textAlign: 'center',
-	},
-	vehicleTypeTextActive: {
-		color: 'white',
 	},
 	createButton: {
 		backgroundColor: '#4285F4',

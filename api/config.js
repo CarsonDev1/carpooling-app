@@ -6,12 +6,15 @@ import { Platform } from 'react-native';
 // Auto-detect API URL based on platform
 const getApiBaseUrl = () => {
 	if (__DEV__) {
+		// Use same IP for both Android and iOS in development
+		const LOCAL_IP = '192.168.55.7'; // Current machine IP
+
 		if (Platform.OS === 'android') {
-			// Android Emulator sử dụng 10.0.2.2 để truy cập localhost của host machine
-			return `http://192.168.1.43:5000/api`;
+			// Android Emulator or Physical Device
+			return `http://${LOCAL_IP}:5000/api`;
 		} else if (Platform.OS === 'ios') {
-			// iOS Simulator hoặc Physical Device - sử dụng IP thật của máy bạn
-			return 'http://192.168.55.39:5000/api';
+			// iOS Simulator hoặc Physical Device
+			return `http://${LOCAL_IP}:5000/api`;
 		}
 	}
 	if (Platform.OS === 'web') {
@@ -59,13 +62,41 @@ api.interceptors.response.use(
 		return response;
 	},
 	async (error) => {
-		console.error('API Error:', error.response?.data || error.message);
+		// Better error logging
+		console.error('🚨 API Error Details:', {
+			message: error.message,
+			status: error.response?.status,
+			data: error.response?.data,
+			config: {
+				url: error.config?.url,
+				method: error.config?.method,
+				baseURL: error.config?.baseURL
+			}
+		});
 
+		// Handle specific error cases
 		if (error.response?.status === 401) {
-			// Token expired hoặc invalid, xóa token và chuyển về login
+			console.log('🔒 Unauthorized - clearing auth data');
 			await AsyncStorage.removeItem('token');
 			await AsyncStorage.removeItem('user');
 		}
+
+		// Network errors
+		if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+			error.message = 'Kết nối timeout. Vui lòng thử lại.';
+		} else if (error.code === 'NETWORK_ERROR' || !error.response) {
+			error.message = 'Không thể kết nối đến server. Kiểm tra kết nối mạng.';
+		} else if (error.response?.status >= 500) {
+			error.message = 'Server đang gặp sự cố. Vui lòng thử lại sau.';
+		} else if (error.response?.status === 429) {
+			error.message = 'Quá nhiều yêu cầu. Vui lòng đợi một chút.';
+		}
+
+		// Ensure error has proper message
+		if (!error.message || error.message === 'undefined') {
+			error.message = 'Đã xảy ra lỗi không xác định';
+		}
+
 		return Promise.reject(error);
 	}
 );

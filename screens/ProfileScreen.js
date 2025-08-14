@@ -27,6 +27,7 @@ const ProfileScreen = () => {
 
   const menuItems = [
     { icon: "👤", label: "Hồ sơ người dùng" },
+    { icon: "💰", label: "Ví điện tử" },
     { icon: "💳", label: "Thanh toán" },
     { icon: "🎁", label: "Tích điểm & Ưu đãi" },
     { icon: "⚙️", label: "Cài đặt" },
@@ -41,18 +42,18 @@ const ProfileScreen = () => {
     >
       {/* Header */}
       <View style={styles["main-header"]}>
-      <View style={styles["main-header-content"]}>
-	  <View style={styles["main-header-left"]}>
-          <Image source={getAvatarSource()} style={styles["main-avatar"]} />
-         
-        </View>
-		<View style={styles["main-header-right"]}>
+        <View style={styles["main-header-content"]}>
+          <View style={styles["main-header-left"]}>
+            <Image source={getAvatarSource()} style={styles["main-avatar"]} />
+
+          </View>
+          <View style={styles["main-header-right"]}>
             <Text style={styles["main-name"]}>
               {user?.fullName || "Người dùng"}
             </Text>
             <Text style={styles["main-status"]}>Hạng đồng</Text>
           </View>
-	  </View>
+        </View>
       </View>
 
       {/* Menu items */}
@@ -62,26 +63,29 @@ const ProfileScreen = () => {
             key={index}
             style={styles["main-menu-item"]}
             activeOpacity={0.7}
-			onPress={() => {
-				if (item.label === "Cài đặt") {
-					navigation.navigate("Setting");
-				}
-				if (item.label === "Tích điểm & Ưu đãi") {
-					navigation.navigate("Rewards");
-				}
-				if (item.label === "Trung tâm hỗ trợ") {
-					navigation.navigate("HelpCenter");
-				}
-				if (item.label === "Quyền riêng tư & Bảo mật") {
-					navigation.navigate("PrivacyPolicy");
-				}
-				if (item.label === "Thanh toán") {
-					navigation.navigate("Payment");
-				}
-				if (item.label === "Hồ sơ người dùng") {
-					navigation.navigate("ProfileDetail");
-				}
-			}}
+            onPress={() => {
+              if (item.label === "Cài đặt") {
+                navigation.navigate("Setting");
+              }
+              if (item.label === "Tích điểm & Ưu đãi") {
+                navigation.navigate("Rewards");
+              }
+              if (item.label === "Trung tâm hỗ trợ") {
+                navigation.navigate("HelpCenter");
+              }
+              if (item.label === "Quyền riêng tư & Bảo mật") {
+                navigation.navigate("PrivacyPolicy");
+              }
+              if (item.label === "Thanh toán") {
+                navigation.navigate("Payment");
+              }
+              if (item.label === "Hồ sơ người dùng") {
+                navigation.navigate("ProfileDetail");
+              }
+              if (item.label === "Ví điện tử") {
+                navigation.navigate("Wallet");
+              }
+            }}
           >
             <View style={styles["main-menu-left"]}>
               <Text style={styles["main-icon"]}>{item.icon}</Text>
@@ -112,16 +116,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#57C2FE",
     paddingVertical: 24,
     alignItems: "center",
-	
+
   },
   "main-header-content": {
-	flexDirection: "row",
-	justifyContent: "center",
-	gap: 10,
-	marginTop: 60,	
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 60,
   },
   "main-header-left": {
-   
+
     alignItems: "center",
   },
   "main-header-right": {
@@ -131,7 +135,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    
+
     marginBottom: 8,
     backgroundColor: "#E0E0E0",
   },
@@ -144,12 +148,12 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 13,
     opacity: 0.9,
-	marginTop: 2,
-	textAlign:"center",
-	backgroundColor: "#fff",
-	paddingHorizontal: 10,
-	paddingVertical: 5,
-	borderRadius: 10,
+    marginTop: 2,
+    textAlign: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   "main-menu": {
     marginTop: 16,
