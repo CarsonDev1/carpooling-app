@@ -22,14 +22,15 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { createBookingRequest, estimatePrice, getVehicleTypes } from '../api/tripsApi';
 import { useAuth } from '../context/AuthContext';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
+import Constants from 'expo-constants';
 import RouteInfo from '../components/RouteInfo';
 import VehicleTypeSelector from '../components/VehicleTypeSelector';
 
 const { width, height } = Dimensions.get('window');
 
 const MAPBOX_ACCESS_TOKEN =
-	'pk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWRvb3ViNHQwMjQ4MmpxMHZ3Yng5b3gxIn0.kt2yx_c1j5JbxRF6SdzXyg';
+	'sk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWVoOXk0bGwwNXE1Mm1yNWg0dWhnZnUzIn0.Ovjrdod0bfZkQ84DT0mX-w';
 
 export default function CreateTripScreen() {
 	const navigation = useNavigation();
@@ -54,7 +55,7 @@ export default function CreateTripScreen() {
 	const [estimatedPrice, setEstimatedPrice] = useState(null);
 	const [vehicleTypes, setVehicleTypes] = useState([]);
 	const [isRecurring, setIsRecurring] = useState(false);
-	const [maxPrice, setMaxPrice] = useState('100000');
+	// Max price removed per new flow
 
 	// Date/Time picker states
 	const [showDatePicker, setShowDatePicker] = useState(false);
@@ -277,8 +278,6 @@ export default function CreateTripScreen() {
 				vehicleType,
 				availableSeats: parseInt(availableSeats),
 				notes,
-				maxPrice: estimatedPrice && estimatedPrice.estimatedPrice ?
-					Math.round(estimatedPrice.estimatedPrice * 1.2) : parseInt(maxPrice),
 				isRecurring,
 			};
 
@@ -503,6 +502,7 @@ export default function CreateTripScreen() {
 						<View style={styles.mapContainer}>
 							<Text style={styles.mapTitle}>📍 Điểm khởi hành</Text>
 							<MapView
+								provider={Platform.OS === 'android' && Constants.appOwnership !== 'expo' ? PROVIDER_GOOGLE : undefined}
 								style={styles.map}
 								region={{
 									latitude: startCoordinates.lat,
@@ -511,6 +511,9 @@ export default function CreateTripScreen() {
 									longitudeDelta: 0.01,
 								}}
 							>
+								{Platform.OS === 'android' && (
+									<UrlTile urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} />
+								)}
 								<Marker
 									coordinate={{
 										latitude: startCoordinates.lat,
@@ -527,6 +530,7 @@ export default function CreateTripScreen() {
 						<View style={styles.mapContainer}>
 							<Text style={styles.mapTitle}>🏁 Điểm đến</Text>
 							<MapView
+								provider={Platform.OS === 'android' && Constants.appOwnership !== 'expo' ? PROVIDER_GOOGLE : undefined}
 								style={styles.map}
 								region={{
 									latitude: endCoordinates.lat,
@@ -535,6 +539,9 @@ export default function CreateTripScreen() {
 									longitudeDelta: 0.01,
 								}}
 							>
+								{Platform.OS === 'android' && (
+									<UrlTile urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} />
+								)}
 								<Marker
 									coordinate={{
 										latitude: endCoordinates.lat,

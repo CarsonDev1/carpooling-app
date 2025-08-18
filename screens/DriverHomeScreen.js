@@ -12,11 +12,13 @@ import {
   StatusBar,
   Image,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getDriverTrips, getDriverStats, getAvailableTrips } from '../api/driverApi';
+import { getDriverTrips, getDriverStats, getAvailableTrips, acceptTrip } from '../api/driverApi';
+import { estimatePrice, updateTripStatus } from '../api/tripsApi';
 
 const { width } = Dimensions.get('window');
 
@@ -36,22 +38,47 @@ const DriverHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [selectedTab, setSelectedTab] = useState('active'); // 'active' or 'available'
   const intervalRef = useRef(null);
+  // Removed price modal/state per updated flow
 
   // Load driver data
   const loadDriverData = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Load active trips
-      const activeTripsResponse = await getDriverTrips('active');
+
+      // Load driver trips and filter active ones (confirmed or in_progress)
+      const activeTripsResponse = await getDriverTrips('all');
       if (activeTripsResponse.success) {
-        setActiveTrips(activeTripsResponse.data || []);
+        const trips = activeTripsResponse.data || [];
+        setActiveTrips(trips.filter(t => ['confirmed', 'in_progress'].includes(t.status)));
       }
 
       // Load available trips
       const availableTripsResponse = await getAvailableTrips();
       if (availableTripsResponse.success) {
-        setAvailableTrips(availableTripsResponse.data || []);
+        const baseTrips = availableTripsResponse.data || [];
+        // Try to estimate price per trip (avoid showing 0đ)
+        const vehicleSeats = user?.vehicle?.seats || 4;
+        const vehicleType = vehicleSeats <= 2 ? 'motorcycle' : vehicleSeats > 5 ? 'suv' : 'car';
+        const enriched = await Promise.all(
+          baseTrips.map(async (t) => {
+            try {
+              const start = t?.startLocation?.coordinates?.coordinates || [];
+              const end = t?.endLocation?.coordinates?.coordinates || [];
+              if (start.length === 2 && end.length === 2) {
+                const res = await estimatePrice({
+                  startLocation: { coordinates: { lat: start[1], lng: start[0] } },
+                  endLocation: { coordinates: { lat: end[1], lng: end[0] } },
+                  vehicleType: vehicleType,
+                });
+                if (res?.success && (res?.data?.estimatedPrice || res?.data?.price)) {
+                  return { ...t, _estimatedPrice: res.data.estimatedPrice || res.data.price };
+                }
+              }
+            } catch (_) { }
+            return t;
+          })
+        );
+        setAvailableTrips(enriched);
       }
 
       // Load driver stats
@@ -128,7 +155,7 @@ const DriverHomeScreen = () => {
 
   // Format time
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString || Date.now());
     return date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -140,7 +167,7 @@ const DriverHomeScreen = () => {
     navigation.navigate('TripDetail', { tripId: trip._id, tripData: trip });
   };
 
-  // Handle start trip
+  // Handle start trip (update status then navigate)
   const handleStartTrip = (trip) => {
     Alert.alert(
       'Bắt đầu chuyến đi',
@@ -149,9 +176,14 @@ const DriverHomeScreen = () => {
         { text: 'Hủy', style: 'cancel' },
         {
           text: 'Bắt đầu',
-          onPress: () => {
-            // Navigate to trip in progress
-            navigation.navigate('TripInProgress', { tripId: trip._id, tripData: trip });
+          onPress: async () => {
+            try {
+              await updateTripStatus(trip._id, 'in_progress');
+              await loadDriverData();
+              navigation.navigate('TripInProgress', { tripId: trip._id, tripData: { ...trip, status: 'in_progress' } });
+            } catch (e) {
+              Alert.alert('Lỗi', e?.message || 'Không thể bắt đầu chuyến đi');
+            }
           },
         },
       ]
@@ -171,15 +203,15 @@ const DriverHomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4285F4" />
-      
+      <StatusBar barStyle="light-content" backgroundColor="#4285F4" />x
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Tài xế</Text>
           <Text style={styles.headerSubtitle}>{user?.fullName || 'Unknown'}</Text>
         </View>
-        
+
         <TouchableOpacity
           style={[styles.onlineToggle, { backgroundColor: isOnline ? '#4CAF50' : '#FF5722' }]}
           onPress={toggleOnlineStatus}
@@ -202,16 +234,16 @@ const DriverHomeScreen = () => {
           <Text style={styles.statNumber}>{stats.totalTrips}</Text>
           <Text style={styles.statLabel}>Tổng chuyến</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <Ionicons name="cash-outline" size={24} color="#4CAF50" />
           <Text style={styles.statNumber}>{formatCurrency(stats.totalEarnings)}</Text>
           <Text style={styles.statLabel}>Tổng thu nhập</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <Ionicons name="star-outline" size={24} color="#FFD700" />
-          <Text style={styles.statNumber}>{stats.rating.toFixed(1)}</Text>
+          <Text style={styles.statNumber}>{Number(stats?.rating || 0).toFixed(1)}</Text>
           <Text style={styles.statLabel}>Đánh giá</Text>
         </View>
       </View>
@@ -226,7 +258,7 @@ const DriverHomeScreen = () => {
             Chuyến đang thực hiện ({activeTrips.length})
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[styles.tab, selectedTab === 'available' && styles.activeTab]}
           onPress={() => setSelectedTab('available')}
@@ -263,9 +295,11 @@ const DriverHomeScreen = () => {
                       <View style={[styles.statusDot, { backgroundColor: '#4CAF50' }]} />
                       <Text style={styles.tripStatusText}>Đang thực hiện</Text>
                     </View>
-                    <Text style={styles.tripPrice}>{formatCurrency(trip.price || 0)}</Text>
+                    <Text style={styles.tripPrice}>
+                      {formatCurrency(trip.price || trip._estimatedPrice || 0)}
+                    </Text>
                   </View>
-                  
+
                   <View style={styles.tripRoute}>
                     <View style={styles.routePoint}>
                       <View style={styles.routeDot} />
@@ -277,7 +311,7 @@ const DriverHomeScreen = () => {
                       <Text style={styles.routeText}>{trip.endLocation.address}</Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.tripDetails}>
                     <View style={styles.tripDetail}>
                       <Ionicons name="time-outline" size={16} color="#666" />
@@ -292,13 +326,22 @@ const DriverHomeScreen = () => {
                       </Text>
                     </View>
                   </View>
-                  
-                  <TouchableOpacity
-                    style={styles.startTripBtn}
-                    onPress={() => handleStartTrip(trip)}
-                  >
-                    <Text style={styles.startTripBtnText}>Bắt đầu chuyến đi</Text>
-                  </TouchableOpacity>
+
+                  {trip.status === 'confirmed' ? (
+                    <TouchableOpacity
+                      style={styles.startTripBtn}
+                      onPress={() => handleStartTrip(trip)}
+                    >
+                      <Text style={styles.startTripBtnText}>Bắt đầu chuyến đi</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.startTripBtn, { backgroundColor: '#9E9E9E' }]}
+                      onPress={() => navigation.navigate('TripInProgress', { tripId: trip._id, tripData: trip })}
+                    >
+                      <Text style={styles.startTripBtnText}>Xem chuyến đang chạy</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))
             )}
@@ -326,9 +369,9 @@ const DriverHomeScreen = () => {
                       <View style={[styles.statusDot, { backgroundColor: '#FF9800' }]} />
                       <Text style={styles.tripStatusText}>Có sẵn</Text>
                     </View>
-                    <Text style={styles.tripPrice}>{formatCurrency(trip.price || 0)}</Text>
+                    <Text style={styles.tripPrice}>{formatCurrency(trip.price || trip._estimatedPrice || 0)}</Text>
                   </View>
-                  
+
                   <View style={styles.tripRoute}>
                     <View style={styles.routePoint}>
                       <View style={styles.routeDot} />
@@ -340,7 +383,7 @@ const DriverHomeScreen = () => {
                       <Text style={styles.routeText}>{trip.endLocation.address}</Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.tripDetails}>
                     <View style={styles.tripDetail}>
                       <Ionicons name="time-outline" size={16} color="#666" />
@@ -357,17 +400,37 @@ const DriverHomeScreen = () => {
                     <View style={styles.tripDetail}>
                       <Ionicons name="star-outline" size={16} color="#666" />
                       <Text style={styles.tripDetailText}>
-                        {trip.requestedBy?.rating?.asPassenger?.average?.toFixed(1) || 'N/A'}
+                        {Number(trip?.requestedBy?.rating?.asPassenger?.average || 0).toFixed(1)}
                       </Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.tripActions}>
                     <TouchableOpacity
-                      style={styles.acceptBtn}
+                      style={[styles.acceptBtn, { marginRight: 8 }]}
                       onPress={() => handleTripSelect(trip)}
                     >
-                      <Text style={styles.acceptBtnText}>Xem chi tiết</Text>
+                      <Text style={styles.acceptBtnText}>Chi tiết</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.acceptBtn, { backgroundColor: '#4CAF50' }]}
+                      onPress={async () => {
+                        try {
+                          setLoading(true);
+                          const response = await acceptTrip(trip._id, {});
+                          if (response?.success) {
+                            Alert.alert('Thành công', 'Đã nhận chuyến.', [
+                              { text: 'OK', onPress: () => loadDriverData() },
+                            ]);
+                          }
+                        } catch (err) {
+                          Alert.alert('Lỗi', err?.message || 'Không thể nhận chuyến.');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    >
+                      <Text style={styles.acceptBtnText}>Nhận chuyến</Text>
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
@@ -376,33 +439,6 @@ const DriverHomeScreen = () => {
           </View>
         )}
       </ScrollView>
-
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('DriverProfile')}
-        >
-          <Ionicons name="person-outline" size={24} color="#4285F4" />
-          <Text style={styles.actionBtnText}>Hồ sơ</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('DriverHistory')}
-        >
-          <Ionicons name="time-outline" size={24} color="#4285F4" />
-          <Text style={styles.actionBtnText}>Lịch sử</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('DriverEarnings')}
-        >
-          <Ionicons name="cash-outline" size={24} color="#4285F4" />
-          <Text style={styles.actionBtnText}>Thu nhập</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
@@ -414,8 +450,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#4285F4',
-    paddingTop: StatusBar.currentHeight || 44,
-    paddingBottom: 16,
+    paddingTop: StatusBar.currentHeight || 4,
+    paddingBottom: 6,
     paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',

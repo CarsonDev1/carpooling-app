@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { getTripById } from '../api/tripsApi';
+import { getTripById, updateTripStatus } from '../api/tripsApi';
 import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get("window");
@@ -31,6 +31,7 @@ export default function TripInProgressScreen() {
   const [loading, setLoading] = useState(true);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Animation for status indicators
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -191,7 +192,9 @@ export default function TripInProgressScreen() {
   };
 
   const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString('vi-VN', {
+    const d = dateString ? new Date(dateString) : null;
+    if (!d || isNaN(d.getTime())) return '—';
+    return d.toLocaleString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
       day: '2-digit',
@@ -204,7 +207,7 @@ export default function TripInProgressScreen() {
     if (!trip) return { text: 'Đang tải...', color: '#666' };
 
     switch (trip.status) {
-      case 'paid':
+      case 'confirmed':
         return { text: 'Chờ khởi hành', color: '#4285F4' };
       case 'in_progress':
         return { text: 'Đang di chuyển', color: '#4CAF50' };
@@ -284,10 +287,10 @@ export default function TripInProgressScreen() {
                 <Text style={styles.plateText}>{trip.driver.vehicleInfo.licensePlate}</Text>
               </View>
             )}
-            {trip?.driver?.rating && (
+            {trip?.driver && (
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={14} color="#FFD700" />
-                <Text style={styles.ratingText}>{trip.driver.rating.toFixed(1)}</Text>
+                <Text style={styles.ratingText}>{Number(trip?.driver?.rating?.asDriver?.average || trip?.driver?.rating || 0).toFixed(1)}</Text>
               </View>
             )}
           </View>
@@ -402,6 +405,31 @@ export default function TripInProgressScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {user?._id === trip?.driver?._id && trip?.status === 'in_progress' && (
+          <TouchableOpacity
+            style={[styles.primaryBtn, actionLoading && styles.disabledBtn, { marginTop: 12 }]}
+            onPress={async () => {
+              try {
+                setActionLoading(true);
+                await updateTripStatus(trip._id, 'completed');
+                await loadTripDetails();
+                Alert.alert('Hoàn thành', 'Bạn đã hoàn thành chuyến đi. Tiền sẽ được cộng vào ví.');
+              } catch (e) {
+                Alert.alert('Lỗi', e?.message || 'Không thể hoàn thành chuyến đi');
+              } finally {
+                setActionLoading(false);
+              }
+            }}
+            disabled={actionLoading}
+          >
+            {actionLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.primaryText}>Hoàn thành chuyến</Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Safety Check Modal */}

@@ -26,7 +26,7 @@ export const estimatePrice = async (priceData) => {
 export const getAllTrips = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     // Thêm các filter parameters
     Object.keys(filters).forEach(key => {
       if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
@@ -42,14 +42,25 @@ export const getAllTrips = async (filters = {}) => {
   }
 };
 
+// Get available carpool trips for passengers
+export const getAvailableCarpoolTrips = async (filters = {}) => {
+  try {
+    const response = await api.get('/trips/carpool/available', { params: filters });
+    return response.data;
+  } catch (error) {
+    console.error('Get available carpool trips error:', error);
+    throw error.response?.data || { message: 'Lấy danh sách chuyến đi nhờ thất bại' };
+  }
+};
+
 // Get available booking requests for drivers
 export const getAvailableBookings = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     // Set role to driver to get available bookings
     queryParams.append('role', 'driver');
-    
+
     // Add other filters
     Object.keys(filters).forEach(key => {
       if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
@@ -69,10 +80,10 @@ export const getAvailableBookings = async (filters = {}) => {
 export const getPassengerBookings = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     // Set role to passenger to get own booking requests
     queryParams.append('role', 'passenger');
-    
+
     // Add other filters
     Object.keys(filters).forEach(key => {
       if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
@@ -102,14 +113,10 @@ export const getTripById = async (tripId) => {
 // Get my trips (as driver)
 export const getMyTrips = async (filters = {}) => {
   try {
-    const queryParams = new URLSearchParams();
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-        queryParams.append(key, filters[key]);
-      }
+    // Use driver trips endpoint
+    const response = await api.get('/drivers/trips', {
+      params: filters
     });
-
-    const response = await api.get(`/trips/my-trips?${queryParams.toString()}`);
     return response.data;
   } catch (error) {
     console.error("Get my trips error:", error);
@@ -120,14 +127,10 @@ export const getMyTrips = async (filters = {}) => {
 // Get my joined trips (as passenger)
 export const getMyJoinedTrips = async (filters = {}) => {
   try {
-    const queryParams = new URLSearchParams();
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-        queryParams.append(key, filters[key]);
-      }
-    });
-
-    const response = await api.get(`/trips/my-joined-trips?${queryParams.toString()}`);
+    // Map legacy status 'scheduled' → 'waiting_for_driver' for instant booking
+    const params = { role: 'passenger', ...filters };
+    if (params.status === 'scheduled') params.status = 'waiting_for_driver';
+    const response = await api.get('/trips', { params });
     return response.data;
   } catch (error) {
     console.error("Get my joined trips error:", error);

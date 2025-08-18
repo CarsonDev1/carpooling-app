@@ -19,14 +19,7 @@ const DriverTabNavigator = () => {
 
           if (route.name === 'DriverHome') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'DriverProfile') {
-            iconName = focused ? 'person' : 'person-outline';
-          } else if (route.name === 'DriverEarnings') {
-            iconName = focused ? 'cash' : 'cash-outline';
-          } else if (route.name === 'DriverHistory') {
-            iconName = focused ? 'time' : 'time-outline';
           }
-
           return <Icon name={iconName} type="ionicon" size={size} color={color} />;
         },
         tabBarActiveTintColor: '#4285F4',
@@ -52,33 +45,6 @@ const DriverTabNavigator = () => {
         options={{
           title: 'Trang chủ',
           tabBarLabel: 'Trang chủ',
-        }}
-      />
-      
-      <Tab.Screen
-        name="DriverEarnings"
-        component={DriverEarningsScreen}
-        options={{
-          title: 'Thu nhập',
-          tabBarLabel: 'Thu nhập',
-        }}
-      />
-      
-      <Tab.Screen
-        name="DriverHistory"
-        component={DriverHistoryScreen}
-        options={{
-          title: 'Lịch sử',
-          tabBarLabel: 'Lịch sử',
-        }}
-      />
-      
-      <Tab.Screen
-        name="DriverProfile"
-        component={DriverProfileScreen}
-        options={{
-          title: 'Hồ sơ',
-          tabBarLabel: 'Hồ sơ',
         }}
       />
     </Tab.Navigator>

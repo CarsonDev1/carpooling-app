@@ -63,21 +63,16 @@ const DriverHistoryScreen = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const date = dateString ? new Date(dateString) : null;
+    if (!date || isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   // Format time
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const date = dateString ? new Date(dateString) : null;
+    if (!date || isNaN(date.getTime())) return '—';
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
   // Get status color
@@ -155,7 +150,7 @@ const DriverHistoryScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4285F4" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -247,7 +242,7 @@ const DriverHistoryScreen = () => {
               <Ionicons name="time-outline" size={64} color="#ccc" />
               <Text style={styles.emptyStateText}>Chưa có chuyến đi</Text>
               <Text style={styles.emptyStateSubtext}>
-                {selectedStatus === 'all' 
+                {selectedStatus === 'all'
                   ? 'Bắt đầu nhận chuyến đi để tạo lịch sử'
                   : `Không có chuyến đi ${getStatusText(selectedStatus).toLowerCase()}`
                 }
@@ -330,7 +325,7 @@ const DriverHistoryScreen = () => {
                   >
                     <Text style={styles.viewDetailsBtnText}>Xem chi tiết</Text>
                   </TouchableOpacity>
-                  
+
                   {trip.status === 'completed' && (
                     <TouchableOpacity
                       style={styles.rateBtn}

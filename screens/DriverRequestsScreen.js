@@ -16,22 +16,23 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { getAvailableBookings, driverRequestBooking, getTripById } from "../api/tripsApi";
+import { getAvailableBookings } from "../api/tripsApi";
+import { acceptTrip } from "../api/driverApi";
 import { useAuth } from "../context/AuthContext";
 
 export default function DriverRequestsScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
-  
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [requestingBooking, setRequestingBooking] = useState(null);
-  
+
   // Modal states
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const [proposedPrice, setProposedPrice] = useState("");
+  // removed price input per new flow
   const [driverMessage, setDriverMessage] = useState("");
 
   // Check user role when screen focuses
@@ -51,10 +52,10 @@ export default function DriverRequestsScreen() {
     // Only users with pure "driver" role can access
     // "both" role users must register as driver first
     // Also check if they have vehicle information
-    return user && 
-           user.role === 'driver' && 
-           user.vehicle && 
-           user.vehicle.licensePlate;
+    return user &&
+      user.role === 'driver' &&
+      user.vehicle &&
+      user.vehicle.licensePlate;
   };
 
   const checkDriverRole = () => {
@@ -80,7 +81,7 @@ export default function DriverRequestsScreen() {
         "Bạn cần hoàn tất quá trình đăng ký tài khoản trước khi sử dụng tính năng này.",
         [
           {
-            text: "OK", 
+            text: "OK",
             onPress: () => navigation.goBack()
           }
         ]
@@ -91,15 +92,15 @@ export default function DriverRequestsScreen() {
     if (!isUserDriver()) {
       // User is not a complete driver, show registration prompt
       let message = "";
-      
+
       if (user.role !== 'driver') {
-        message = user.role === 'both' 
+        message = user.role === 'both'
           ? "Bạn cần chuyển đổi và đăng ký thành tài xế chuyên nghiệp để xem các yêu cầu đặt xe. Bạn có muốn đăng ký ngay không?"
           : "Bạn cần đăng ký làm tài xế để xem các yêu cầu đặt xe. Bạn có muốn đăng ký ngay không?";
       } else if (!user.vehicle || !user.vehicle.licensePlate) {
         message = "Bạn cần hoàn tất thông tin xe để có thể nhận chuyến. Bạn có muốn cập nhật thông tin xe ngay không?";
       }
-        
+
       Alert.alert(
         "Đăng ký làm tài xế",
         message,
@@ -122,16 +123,13 @@ export default function DriverRequestsScreen() {
   const loadAvailableBookings = async () => {
     try {
       setLoading(true);
-      
+
       const response = await getAvailableBookings({
-        status: 'pending_driver',
-        limit: 100, // Increased limit to show more
-        includePast: false // Only future trips
+        limit: 100,
+        includePast: false
       });
-      
+
       if (response.success) {
-        // Show ALL available bookings without filtering
-        // Include both new requests and ones the driver already applied to
         setBookings(response.data);
       }
     } catch (error) {
@@ -156,56 +154,31 @@ export default function DriverRequestsScreen() {
   };
 
   const submitDriverRequest = async () => {
-    if (!proposedPrice) {
-      Alert.alert("Lỗi", "Vui lòng nhập giá đề xuất");
-      return;
-    }
-
-    const price = parseInt(proposedPrice);
-    if (isNaN(price) || price <= 0) {
-      Alert.alert("Lỗi", "Giá đề xuất không hợp lệ");
-      return;
-    }
-
-    if (selectedBooking.maxPrice && price > selectedBooking.maxPrice) {
-      Alert.alert(
-        "Giá vượt quá ngân sách",
-        `Giá đề xuất (${price.toLocaleString('vi-VN')}đ) vượt quá ngân sách tối đa của khách (${selectedBooking.maxPrice.toLocaleString('vi-VN')}đ). Bạn có muốn tiếp tục?`,
-        [
-          { text: "Hủy", style: "cancel" },
-          { text: "Tiếp tục", onPress: () => doSubmitRequest(price) }
-        ]
-      );
-      return;
-    }
-
-    doSubmitRequest(price);
+    // No price input; accept directly
+    doSubmitAccept();
   };
 
-  const doSubmitRequest = async (price) => {
+  const doSubmitAccept = async () => {
     try {
       setRequestingBooking(selectedBooking._id);
       setShowRequestModal(false);
-      
-      const requestData = {
-        proposedPrice: price,
-        message: driverMessage.trim()
-      };
-      
-      await driverRequestBooking(selectedBooking._id, requestData);
-      
-      Alert.alert(
-        "Thành công! 🎉",
-        "Yêu cầu của bạn đã được gửi. Hành khách sẽ xem xét và phản hồi sớm!",
-        [
-          {
-            text: "OK",
-            onPress: () => loadAvailableBookings() // Refresh list
-          }
-        ]
-      );
+
+      const response = await acceptTrip(selectedBooking._id, { message: driverMessage.trim() });
+
+      if (response?.success) {
+        Alert.alert(
+          "Thành công! 🎉",
+          "Bạn đã nhận chuyến. Thanh toán đã được xử lý.",
+          [
+            {
+              text: "OK",
+              onPress: () => loadAvailableBookings()
+            }
+          ]
+        );
+      }
     } catch (error) {
-      Alert.alert("Lỗi", error.message || "Không thể gửi yêu cầu");
+      Alert.alert("Lỗi", error.message || "Không thể nhận chuyến");
     } finally {
       setRequestingBooking(null);
     }
@@ -216,65 +189,51 @@ export default function DriverRequestsScreen() {
     if (booking.startLocation?.coordinates && booking.endLocation?.coordinates) {
       const start = booking.startLocation.coordinates.coordinates;
       const end = booking.endLocation.coordinates.coordinates;
-      
+
       // Simple distance formula (approximate)
       const dLat = Math.abs(end[1] - start[1]) * 111; // 1 degree ≈ 111km
       const dLng = Math.abs(end[0] - start[0]) * 111 * Math.cos(start[1] * Math.PI / 180);
       return Math.sqrt(dLat * dLat + dLng * dLng).toFixed(1);
     }
-    
+
     return (Math.random() * 15 + 2).toFixed(1); // Fallback: 2-17km
   };
 
   const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
+    const date = dateString ? new Date(dateString) : null;
+    const valid = date && !isNaN(date.getTime());
+    if (!valid) return { date: '—', time: '—' };
     const now = new Date();
     const diffHours = (date.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    let timeLabel = "";
-    if (diffHours < 24) {
-      timeLabel = "Hôm nay";
-    } else if (diffHours < 48) {
-      timeLabel = "Ngày mai";
+    let timeLabel = '';
+    if (diffHours < 24 && diffHours >= 0) {
+      timeLabel = 'Hôm nay';
+    } else if (diffHours < 48 && diffHours >= 0) {
+      timeLabel = 'Ngày mai';
     } else {
       timeLabel = date.toLocaleDateString('vi-VN');
     }
-    
-    const time = date.toLocaleTimeString('vi-VN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-    
+    const time = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     return { date: timeLabel, time };
   };
 
   const getTimeUntilDeparture = (dateString) => {
+    const departure = dateString ? new Date(dateString) : null;
+    const valid = departure && !isNaN(departure.getTime());
+    if (!valid) return '';
     const now = new Date();
-    const departure = new Date(dateString);
     const diffHours = (departure.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    if (diffHours < 1) {
-      return "Sắp khởi hành";
-    } else if (diffHours < 24) {
-      return `${Math.round(diffHours)} giờ nữa`;
-    } else {
-      return `${Math.round(diffHours / 24)} ngày nữa`;
-    }
+    if (diffHours < 1) return 'Sắp khởi hành';
+    if (diffHours < 24) return `${Math.round(diffHours)} giờ nữa`;
+    return `${Math.round(diffHours / 24)} ngày nữa`;
   };
 
   const renderBookingItem = ({ item }) => {
-    const { date, time } = formatDateTime(item.departureTime);
+    const dep = item.departureTime || item.createdAt;
+    const { date, time } = formatDateTime(dep);
     const distance = calculateDistance(item);
-    const timeUntil = getTimeUntilDeparture(item.departureTime);
+    const timeUntil = getTimeUntilDeparture(dep);
     const hasMaxPrice = item.maxPrice && item.maxPrice > 0;
-    
-    // Check if current driver already requested this booking
-    const hasMyRequest = item.driverRequests?.some(
-      req => req.driver === user._id || req.driver._id === user._id
-    );
-    const myRequest = item.driverRequests?.find(
-      req => req.driver === user._id || req.driver._id === user._id
-    );
 
     return (
       <View style={styles.bookingCard}>
@@ -312,8 +271,8 @@ export default function DriverRequestsScreen() {
           <View style={styles.passengerInfo}>
             <View style={styles.passengerAvatar}>
               {item.requestedBy?.avatar ? (
-                <Image 
-                  source={{ uri: item.requestedBy.avatar }} 
+                <Image
+                  source={{ uri: item.requestedBy.avatar }}
                   style={styles.avatarImage}
                 />
               ) : (
@@ -344,19 +303,19 @@ export default function DriverRequestsScreen() {
           <View style={styles.detailRow}>
             <Ionicons name="people-outline" size={16} color="#666" />
             <Text style={styles.detailText}>
-              {item.availableSeats} chỗ cần đặt
+              {item.seatsRequested || 1} chỗ cần đặt
             </Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="car-outline" size={16} color="#666" />
             <Text style={styles.detailText}>
-              Xe {item.preferredVehicleType === 'motorcycle' ? 'máy' : 
-                  item.preferredVehicleType === 'suv' ? 'SUV' :
+              Xe {item.preferredVehicleType === 'motorcycle' ? 'máy' :
+                item.preferredVehicleType === 'suv' ? 'SUV' :
                   item.preferredVehicleType === 'luxury' ? 'sang' : 'hơi'} ưu tiên
             </Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={16} color="#666" />
             <Text style={styles.detailText}>{timeUntil}</Text>
@@ -380,25 +339,7 @@ export default function DriverRequestsScreen() {
           </View>
         )}
 
-        {/* Request Count */}
-        {item.driverRequests && item.driverRequests.length > 0 && (
-          <View style={styles.requestCount}>
-            <Ionicons name="people" size={14} color="#FF9800" />
-            <Text style={styles.requestCountText}>
-              {item.driverRequests.length} tài xế đã quan tâm
-            </Text>
-          </View>
-        )}
-
-        {/* My Request Status */}
-        {hasMyRequest && (
-          <View style={styles.myRequestStatus}>
-            <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-            <Text style={styles.myRequestText}>
-              Đã gửi yêu cầu - Giá: {myRequest?.proposedPrice?.toLocaleString('vi-VN')}đ
-            </Text>
-          </View>
-        )}
+        {/* Instant accept model: no driverRequests display */}
 
         {/* Action Button */}
         <TouchableOpacity
@@ -407,10 +348,7 @@ export default function DriverRequestsScreen() {
             hasMyRequest && styles.alreadyRequestedBtn,
             requestingBooking === item._id && styles.disabledBtn
           ]}
-          onPress={() => hasMyRequest ? 
-            Alert.alert("Thông báo", "Bạn đã gửi yêu cầu cho chuyến này rồi") :
-            handleRequestBooking(item)
-          }
+          onPress={() => handleRequestBooking(item)}
           disabled={requestingBooking === item._id}
         >
           {requestingBooking === item._id ? (
@@ -418,13 +356,9 @@ export default function DriverRequestsScreen() {
           ) : (
             <>
               <Text style={styles.requestBtnText}>
-                {hasMyRequest ? "Đã gửi yêu cầu" : "Gửi yêu cầu nhận chuyến"}
+                Nhận chuyến ngay
               </Text>
-              <Ionicons 
-                name={hasMyRequest ? "checkmark" : "send"} 
-                size={16} 
-                color="white" 
-              />
+              <Ionicons name="checkmark" size={16} color="white" />
             </>
           )}
         </TouchableOpacity>
@@ -437,7 +371,7 @@ export default function DriverRequestsScreen() {
       <Ionicons name="car-outline" size={64} color="#ccc" />
       <Text style={styles.emptyTitle}>Chưa có yêu cầu đặt xe nào</Text>
       <Text style={styles.emptyText}>
-        Hiện tại chưa có hành khách nào tạo yêu cầu đặt xe. 
+        Hiện tại chưa có hành khách nào tạo yêu cầu đặt xe.
         Hãy quay lại sau để xem các yêu cầu mới!
       </Text>
       <TouchableOpacity
@@ -475,10 +409,10 @@ export default function DriverRequestsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4285F4" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
         >
@@ -500,7 +434,7 @@ export default function DriverRequestsScreen() {
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>
-            {bookings.reduce((total, booking) => 
+            {bookings.reduce((total, booking) =>
               total + booking.availableSeats, 0
             )}
           </Text>
@@ -552,23 +486,7 @@ export default function DriverRequestsScreen() {
                   </Text>
                 </View>
 
-                <View style={styles.inputSection}>
-                  <Text style={styles.inputLabel}>
-                    Giá đề xuất (VND) <Text style={styles.required}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={styles.priceInput}
-                    placeholder="Nhập giá bạn muốn đưa"
-                    value={proposedPrice}
-                    onChangeText={setProposedPrice}
-                    keyboardType="numeric"
-                  />
-                  {selectedBooking.maxPrice && (
-                    <Text style={styles.maxPriceHint}>
-                      Ngân sách tối đa: {selectedBooking.maxPrice.toLocaleString('vi-VN')}đ
-                    </Text>
-                  )}
-                </View>
+                {/* Price input removed */}
 
                 <View style={styles.inputSection}>
                   <Text style={styles.inputLabel}>Tin nhắn cho khách hàng</Text>
@@ -589,7 +507,7 @@ export default function DriverRequestsScreen() {
                   >
                     <Text style={styles.cancelModalBtnText}>Hủy</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={styles.submitModalBtn}
                     onPress={submitDriverRequest}
@@ -607,11 +525,11 @@ export default function DriverRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#F5F7FA" 
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F7FA"
   },
-  
+
   header: {
     backgroundColor: "#4285F4",
     paddingTop: StatusBar.currentHeight || 44,

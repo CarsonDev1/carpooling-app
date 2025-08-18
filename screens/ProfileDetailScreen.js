@@ -44,7 +44,7 @@ const ProfileDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-    
+
 
       {/* Profile Fields */}
       <View style={styles.infoWrapper}>
@@ -54,8 +54,8 @@ const ProfileDetailScreen = () => {
         </View>
 
         <View style={styles.infoBox}>
-          <Text style={styles.label}>Sinh nhật:</Text>
-          <Text style={styles.value}>{user?.birthday || "Chưa cập nhật"}</Text>
+          <Text style={styles.label}>Ngày sinh:</Text>
+          <Text style={styles.value}>{user?.dateOfBirth || "Chưa cập nhật"}</Text>
         </View>
 
         <View style={styles.infoBox}>

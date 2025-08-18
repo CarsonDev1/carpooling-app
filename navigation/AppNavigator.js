@@ -32,6 +32,7 @@ import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import DeleteAccountScreen from "../screens/DeleteAccountScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import ProfileDetailScreen from "../screens/ProfileDetailScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
 import SimilarTripsScreen from "../screens/SimilarTripsScreen";
 import WaitingMatchScreen from "../screens/WaitingMatchScreen";
 import TripDetailScreen from "../screens/TripDetailScreen";
@@ -41,12 +42,12 @@ import WaitingForDriverScreen from "../screens/WaitingForDriverScreen";
 import DriverRegistrationScreen from "../screens/DriverRegistrationScreen";
 import DriverRequestsScreen from "../screens/DriverRequestsScreen";
 import DriverHomeScreen from "../screens/DriverHomeScreen";
-import DriverProfileScreen from "../screens/DriverProfileScreen";
-import DriverEarningsScreen from "../screens/DriverEarningsScreen";
-import DriverHistoryScreen from "../screens/DriverHistoryScreen";
+// Removed driver-specific tabs/screens per request
 import PaymentSuccessScreen from "../screens/PaymentSuccessScreen";
 import NavigationScreen from '../screens/NavigationScreen';
 import WalletScreen from "../screens/WalletScreen";
+import FavoritesScreen from "../screens/FavoritesScreen";
+import CarpoolBrowseScreen from "../screens/CarpoolBrowseScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -139,6 +140,11 @@ const HomeStack = () => {
         options={{ title: "Đang chờ", headerShown: false }}
       />
       <Stack.Screen
+        name="CarpoolBrowse"
+        component={CarpoolBrowseScreen}
+        options={{ title: "Đi nhờ chuyến", headerShown: false }}
+      />
+      <Stack.Screen
         name="TripDetail"
         component={TripDetailScreen}
         options={{ title: "Chi tiết lộ trình", headerShown: false }}
@@ -169,21 +175,7 @@ const HomeStack = () => {
         component={DriverHomeScreen}
         options={{ title: "Tài xế", headerShown: false }}
       />
-      <Stack.Screen
-        name="DriverProfile"
-        component={DriverProfileScreen}
-        options={{ title: "Hồ sơ tài xế", headerShown: false }}
-      />
-      <Stack.Screen
-        name="DriverEarnings"
-        component={DriverEarningsScreen}
-        options={{ title: "Thu nhập tài xế", headerShown: false }}
-      />
-      <Stack.Screen
-        name="DriverHistory"
-        component={DriverHistoryScreen}
-        options={{ title: "Lịch sử tài xế", headerShown: false }}
-      />
+      {/* Driver profile/earnings/history screens removed */}
       <Stack.Screen
         name="PaymentSuccess"
         component={PaymentSuccessScreen}
@@ -279,6 +271,16 @@ const ProfileStack = () => {
         name="ProfileDetail"
         component={ProfileDetailScreen}
         options={{ title: "Chi tiết", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Favorites"
+        component={FavoritesScreen}
+        options={{ title: "Địa điểm yêu thích", headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: "Cập nhật hồ sơ", headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -419,6 +421,11 @@ const MainTabs = () => {
         name="Profile"
         component={ProfileStack}
         options={{ tabBarLabel: "Cá nhân" }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Profile', { screen: 'ProfileMain' });
+          },
+        })}
       />
     </Tab.Navigator>
   );

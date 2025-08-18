@@ -92,6 +92,10 @@ export const logoutUser = async () => {
     // Luôn xóa dữ liệu local
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
+    // Xóa header Authorization mặc định để tránh dùng nhầm token cũ
+    if (api?.defaults?.headers?.common?.Authorization) {
+      delete api.defaults.headers.common.Authorization;
+    }
   }
 };
 

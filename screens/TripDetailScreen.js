@@ -20,11 +20,11 @@ export default function TripDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
-  
+
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
-  
+
   const { tripId } = route.params || {};
 
   useEffect(() => {
@@ -109,9 +109,9 @@ export default function TripDetailScreen() {
     const date = new Date(dateString);
     return {
       date: date.toLocaleDateString('vi-VN'),
-      time: date.toLocaleTimeString('vi-VN', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      time: date.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit'
       })
     };
   };
@@ -153,14 +153,14 @@ export default function TripDetailScreen() {
     );
   }
 
-  const { date: departureDate, time: departureTime } = formatDateTime(trip.departureTime);
+  const { date: departureDate, time: departureTime } = formatDateTime(trip?.departureTime || trip?.createdAt);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.headerWrapper}>
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
           >
@@ -169,23 +169,23 @@ export default function TripDetailScreen() {
         </View>
       </View>
       <Text style={styles.headerTitle}>Chi tiết chuyến đi</Text>
-      
+
       <ScrollView contentContainerStyle={styles.content}>
         {/* Driver Info */}
         <View style={styles.driverBox}>
           <View>
-            <Text style={styles.driverName}>{trip.driver.fullName}</Text>
+            <Text style={styles.driverName}>{trip?.driver?.fullName || 'Tài xế'}</Text>
             <Text style={styles.vehicle}>
-              {trip.driver.vehicle?.brand || 'Xe'} | {trip.driver.vehicle?.model || 'N/A'}
+              {(trip?.driver?.vehicle?.brand || 'Xe')} | {(trip?.driver?.vehicle?.model || 'N/A')}
             </Text>
-            {trip.driver.vehicle?.licensePlate && (
+            {trip?.driver?.vehicle?.licensePlate && (
               <View style={styles.plateBox}>
                 <Text style={styles.plateText}>{trip.driver.vehicle.licensePlate}</Text>
               </View>
             )}
           </View>
           <View style={styles.avatar}>
-            {trip.driver.avatar ? (
+            {trip?.driver?.avatar ? (
               <Image source={{ uri: trip.driver.avatar }} style={styles.avatarImage} />
             ) : (
               <Ionicons name="person" size={24} color="#666" />
@@ -197,10 +197,11 @@ export default function TripDetailScreen() {
         <View style={styles.statusContainer}>
           <Text style={[styles.statusText, { color: getStatusColor(trip.status) }]}>
             Trạng thái: {
-              trip.status === 'scheduled' ? 'Đã lên lịch' :
-              trip.status === 'in_progress' ? 'Đang di chuyển' :
-              trip.status === 'completed' ? 'Hoàn thành' :
-              trip.status === 'cancelled' ? 'Đã hủy' : trip.status
+              trip.status === 'waiting_for_driver' ? 'Đang chờ tài xế' :
+                trip.status === 'confirmed' ? 'Đã xác nhận' :
+                  trip.status === 'in_progress' ? 'Đang di chuyển' :
+                    trip.status === 'completed' ? 'Hoàn thành' :
+                      trip.status === 'cancelled' ? 'Đã hủy' : trip.status
             }
           </Text>
           <Text style={styles.seatsText}>
@@ -274,8 +275,8 @@ export default function TripDetailScreen() {
                   <Text style={styles.passengerPhone}>{passenger.user.phone}</Text>
                   <Text style={[styles.passengerStatus, { color: getStatusColor(passenger.status) }]}>
                     {passenger.status === 'pending' ? 'Đang chờ' :
-                     passenger.status === 'accepted' ? 'Đã chấp nhận' :
-                     passenger.status === 'declined' ? 'Đã từ chối' : passenger.status}
+                      passenger.status === 'accepted' ? 'Đã chấp nhận' :
+                        passenger.status === 'declined' ? 'Đã từ chối' : passenger.status}
                   </Text>
                 </View>
                 {passenger.status === 'pending' && (
@@ -308,20 +309,8 @@ export default function TripDetailScreen() {
 
       {/* Footer Actions */}
       <View style={styles.footer}>
-        {isDriver && trip.status === 'scheduled' && (
-          <TouchableOpacity
-            style={[styles.primaryBtn, actionLoading === "start" && styles.disabledBtn]}
-            onPress={handleStartTrip}
-            disabled={actionLoading === "start"}
-          >
-            {actionLoading === "start" ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text style={styles.primaryBtnText}>Bắt đầu chuyến đi</Text>
-            )}
-          </TouchableOpacity>
-        )}
-        
+        {/* Lịch sử/chi tiết chỉ để xem, không cho bắt đầu chuyến ở đây */}
+
         {isPassenger && myPassengerRecord?.status === 'pending' && (
           <TouchableOpacity
             style={[styles.cancelBtn, actionLoading === "cancel" && styles.disabledBtn]}
@@ -344,7 +333,7 @@ export default function TripDetailScreen() {
             <Text style={styles.primaryBtnText}>Xem chuyến đi</Text>
           </TouchableOpacity>
         )}
-        
+
         <Text style={styles.supportText}>Bạn cần hỗ trợ?</Text>
       </View>
     </SafeAreaView>
@@ -554,7 +543,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999",
   },
-  
+
   // New styles
   loadingContainer: {
     flex: 1,

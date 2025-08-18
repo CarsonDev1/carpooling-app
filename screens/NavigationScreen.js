@@ -12,8 +12,9 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 
 const { width, height } = Dimensions.get('window');
 
@@ -269,12 +270,20 @@ export default function NavigationScreen() {
         <MapView
           ref={mapRef}
           style={styles.map}
+          provider={Platform.OS === 'android' && Constants.appOwnership !== 'expo' ? PROVIDER_GOOGLE : undefined}
           initialRegion={getMapRegion()}
           showsUserLocation={true}
           showsMyLocationButton={false}
           showsCompass={true}
           showsScale={true}
         >
+          {Platform.OS === 'android' && (
+            <UrlTile
+              urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maximumZ={19}
+              flipY={false}
+            />
+          )}
           {/* Start Marker */}
           <Marker
             coordinate={origin}

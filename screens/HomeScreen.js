@@ -245,13 +245,11 @@ export default function HomeScreen() {
       // Get both my trips (as driver) and joined trips (as passenger)
       const [myTripsResponse, joinedTripsResponse] = await Promise.all([
         getMyTrips({
-          status: 'scheduled',
-          fromDate: new Date().toISOString(),
+          status: 'confirmed',
           limit: 5
         }).catch(() => ({ data: [] })),
         getMyJoinedTrips({
-          status: 'scheduled',
-          fromDate: new Date().toISOString(),
+          status: 'waiting_for_driver',
           limit: 5
         }).catch(() => ({ data: [] }))
       ]);
@@ -279,12 +277,13 @@ export default function HomeScreen() {
   };
 
   const formatTripForDisplay = (trip) => {
-    const departureDate = new Date(trip.departureTime);
-    const formattedDate = `${departureDate.getDate()}/${departureDate.getMonth() + 1}`;
-    const formattedTime = departureDate.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const raw = trip?.departureTime || trip?.createdAt;
+    const departureDate = raw ? new Date(raw) : null;
+    const isValid = departureDate && !isNaN(departureDate.getTime());
+    const formattedDate = isValid ? `${departureDate.getDate()}/${departureDate.getMonth() + 1}` : '';
+    const formattedTime = isValid
+      ? departureDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      : '';
 
     // Truncate long addresses
     const truncateAddress = (address, maxLength = 20) => {
@@ -307,8 +306,8 @@ export default function HomeScreen() {
 
     return {
       id: trip._id,
-      date: formattedDate,
-      time: formattedTime,
+      date: formattedDate || '—',
+      time: formattedTime || '—',
       from: truncateAddress(trip.startLocation?.address),
       to: truncateAddress(trip.endLocation?.address),
       status,
@@ -472,7 +471,7 @@ export default function HomeScreen() {
 
         <View style={styles.favoriteHeader}>
           <Text style={styles.tripTitle}>Điểm đến yêu thích</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile', { screen: 'Favorites' })}>
             <Image
               source={require("../assets/ic-add.png")}
               style={styles.favoriteAddIcon}
@@ -480,53 +479,59 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {[
-          {
-            icon: require("../assets/icon-location.png"),
-            label: "Địa điểm",
-            address: "93 Hào Nam, Ô Chợ Dừa, Đống Đa, Hà Nội",
-          },
-          {
-            icon: require("../assets/icon-school.png"),
-            label: "Trường học",
-            address: "168 Nguyễn Trãi, Thanh Xuân, Hà Nội",
-          },
-          {
-            icon: require("../assets/icon-home.png"),
-            label: "Nhà",
-            address: "77 Lê Văn Lương, Thanh Xuân, Hà Nội",
-          },
-        ].map((item, idx) => (
-          <View key={idx} style={styles.favoriteRow}>
-            <View style={styles.favoriteLeft}>
-              <Image source={item.icon} style={styles.favoriteIcon} />
-              <TouchableOpacity style={styles.favoriteDropdown}>
-                <Text style={styles.favoriteDropdownText} numberOfLines={1}>
-                  {item.label}
+        {(() => {
+          const favorites = Array.isArray(userData?.addresses) ? userData.addresses : [];
+          const getIconForLabel = (label) => {
+            const l = (label || '').toLowerCase();
+            if (l.includes('nhà') || l.includes('home')) return require('../assets/icon-home.png');
+            if (l.includes('trường') || l.includes('school')) return require('../assets/icon-school.png');
+            return require('../assets/icon-location.png');
+          };
+          if (!favorites.length) {
+            return (
+              <View style={styles.favoriteRow}>
+                <View style={styles.favoriteLeft}>
+                  <Image source={require('../assets/icon-location.png')} style={styles.favoriteIcon} />
+                  <View style={styles.favoriteDropdown}>
+                    <Text style={styles.favoriteDropdownText}>Chưa có địa điểm</Text>
+                  </View>
+                </View>
+                <View style={styles.favoriteRight}>
+                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { screen: 'Favorites' })}>
+                    <Text style={styles.viewAllText}>Thêm địa điểm</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          }
+          return favorites.map((fav, idx) => (
+            <View key={`${fav.label}-${idx}`} style={styles.favoriteRow}>
+              <View style={styles.favoriteLeft}>
+                <Image source={getIconForLabel(fav.label)} style={styles.favoriteIcon} />
+                <View style={styles.favoriteDropdown}>
+                  <Text style={styles.favoriteDropdownText} numberOfLines={1}>
+                    {fav.label || 'Địa điểm'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.favoriteRight}>
+                <Text
+                  style={styles.favoriteAddress}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {fav.address || ''}
                 </Text>
-                <Image
-                  source={require("../assets/icon-dropdown.png")}
-                  style={styles.favoriteDropdownIcon}
-                />
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile', { screen: 'Favorites' })}>
+                  <Image
+                    source={require('../assets/icon-edit.png')}
+                    style={styles.favoriteEditIcon}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.favoriteRight}>
-              <Text
-                style={styles.favoriteAddress}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.address}
-              </Text>
-              <TouchableOpacity>
-                <Image
-                  source={require("../assets/icon-edit.png")}
-                  style={styles.favoriteEditIcon}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+          ));
+        })()}
       </ScrollView>
     </SafeAreaView>
   );

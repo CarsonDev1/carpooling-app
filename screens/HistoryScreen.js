@@ -30,7 +30,7 @@ const HistoryScreen = () => {
   const loadTripsHistory = async () => {
     try {
       setLoading(true);
-      
+
       // Load both passenger trips and driver trips
       const [passengerResponse, driverResponse] = await Promise.all([
         getMyJoinedTrips({ includePast: true, limit: 50 }).catch(() => ({ data: [] })),
@@ -39,7 +39,7 @@ const HistoryScreen = () => {
 
       // Format passenger trips
       const formattedPassengerTrips = (passengerResponse.data || []).map(trip => formatTripForHistory(trip, 'passenger'));
-      
+
       // Format driver trips  
       const formattedDriverTrips = (driverResponse.data || []).map(trip => formatTripForHistory(trip, 'driver'));
 
@@ -60,12 +60,15 @@ const HistoryScreen = () => {
   };
 
   const formatTripForHistory = (trip, role) => {
-    const departureDate = new Date(trip.departureTime);
-    const formattedDate = `${departureDate.getDate()}/${departureDate.getMonth() + 1}/${departureDate.getFullYear()}`;
-    const formattedTime = departureDate.toLocaleTimeString('vi-VN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    const raw = trip?.departureTime || trip?.createdAt;
+    const d = raw ? new Date(raw) : null;
+    const valid = d && !isNaN(d.getTime());
+    const formattedDate = valid
+      ? `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+      : '—';
+    const formattedTime = valid
+      ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      : '—';
 
     return {
       id: trip._id,
@@ -85,7 +88,7 @@ const HistoryScreen = () => {
   };
 
   const handleReorder = (trip) => {
-            navigation.navigate("CreateTrip");
+    navigation.navigate("CreateTrip");
   };
 
   const getStatusColor = (status) => {
@@ -122,14 +125,14 @@ const HistoryScreen = () => {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            {tab === "hanhkhach" ? 
-              "Chưa có chuyến đi nào với vai trò hành khách" : 
+            {tab === "hanhkhach" ?
+              "Chưa có chuyến đi nào với vai trò hành khách" :
               "Chưa có chuyến đi nào với vai trò tài xế"}
           </Text>
-                      <TouchableOpacity
-              style={styles.createTripButton}
-              onPress={() => navigation.navigate("CreateTrip")}
-            >
+          <TouchableOpacity
+            style={styles.createTripButton}
+            onPress={() => navigation.navigate("CreateTrip")}
+          >
             <Text style={styles.createTripButtonText}>
               {tab === "hanhkhach" ? "Tìm chuyến đi" : "Tạo chuyến đi"}
             </Text>
@@ -139,8 +142,8 @@ const HistoryScreen = () => {
     }
 
     return (
-      <ScrollView 
-        style={styles.list} 
+      <ScrollView
+        style={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

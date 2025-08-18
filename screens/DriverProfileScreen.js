@@ -53,8 +53,8 @@ const DriverProfileScreen = () => {
         setIsOnline(value);
         Alert.alert(
           value ? 'Đã bật chế độ nhận chuyến' : 'Đã tắt chế độ nhận chuyến',
-          value 
-            ? 'Bạn đang online và có thể nhận chuyến đi mới!' 
+          value
+            ? 'Bạn đang online và có thể nhận chuyến đi mới!'
             : 'Bạn đang offline và sẽ không nhận chuyến đi mới.'
         );
       }
@@ -75,8 +75,8 @@ const DriverProfileScreen = () => {
         setAutoAccept(value);
         Alert.alert(
           value ? 'Đã bật tự động nhận chuyến' : 'Đã tắt tự động nhận chuyến',
-          value 
-            ? 'Hệ thống sẽ tự động nhận chuyến đi phù hợp cho bạn.' 
+          value
+            ? 'Hệ thống sẽ tự động nhận chuyến đi phù hợp cho bạn.'
             : 'Bạn sẽ cần xác nhận từng chuyến đi.'
         );
       }
@@ -142,7 +142,7 @@ const DriverProfileScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4285F4" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -178,7 +178,7 @@ const DriverProfileScreen = () => {
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={16} color="#FFD700" />
                 <Text style={styles.ratingText}>
-                  {profile?.rating?.asDriver?.average?.toFixed(1) || 'N/A'}
+                  {Number(profile?.rating?.asDriver?.average || 0).toFixed(1)}
                 </Text>
                 <Text style={styles.ratingCount}>
                   ({profile?.rating?.asDriver?.count || 0} đánh giá)
@@ -211,13 +211,13 @@ const DriverProfileScreen = () => {
             <Text style={styles.statNumber}>{profile?.stats?.totalTrips || 0}</Text>
             <Text style={styles.statLabel}>Tổng chuyến</Text>
           </View>
-          
+
           <View style={styles.statCard}>
             <Ionicons name="cash-outline" size={24} color="#4CAF50" />
             <Text style={styles.statNumber}>{formatCurrency(profile?.stats?.totalEarnings || 0)}</Text>
             <Text style={styles.statLabel}>Tổng thu nhập</Text>
           </View>
-          
+
           <View style={styles.statCard}>
             <Ionicons name="time-outline" size={24} color="#FF9800" />
             <Text style={styles.statNumber}>{profile?.stats?.totalHours || 0}h</Text>
@@ -228,7 +228,7 @@ const DriverProfileScreen = () => {
         {/* Settings */}
         <View style={styles.settingsContainer}>
           <Text style={styles.sectionTitle}>Cài đặt</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Ionicons name="radio-button-on" size={20} color="#4285F4" />
@@ -311,7 +311,7 @@ const DriverProfileScreen = () => {
                 <View style={styles.activityRating}>
                   <Ionicons name="star" size={16} color="#FFD700" />
                   <Text style={styles.activityRatingText}>
-                    {trip.rating?.toFixed(1) || 'N/A'}
+                    {Number(trip?.rating || 0).toFixed(1)}
                   </Text>
                 </View>
               </View>
@@ -333,7 +333,7 @@ const DriverProfileScreen = () => {
             <Ionicons name="time-outline" size={20} color="#4285F4" />
             <Text style={styles.actionBtnText}>Xem lịch sử</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => navigation.navigate('DriverEarnings')}
@@ -341,7 +341,7 @@ const DriverProfileScreen = () => {
             <Ionicons name="cash-outline" size={20} color="#4CAF50" />
             <Text style={styles.actionBtnText}>Xem thu nhập</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => navigation.navigate('DriverSettings')}

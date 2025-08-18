@@ -34,9 +34,9 @@ export const updateDriverStatus = async (statusData) => {
 // Driver Trips APIs
 export const getDriverTrips = async (status = 'all', period = 'month') => {
   try {
-    const response = await api.get('/drivers/trips', {
-      params: { status, period }
-    });
+    const params = {};
+    if (status && status !== 'all') params.status = status;
+    const response = await api.get('/drivers/trips', { params });
     return response.data;
   } catch (error) {
     console.error('❌ Get driver trips error:', error);
@@ -46,8 +46,8 @@ export const getDriverTrips = async (status = 'all', period = 'month') => {
 
 export const getAvailableTrips = async (filters = {}) => {
   try {
-    const response = await api.get('/drivers/available-trips', {
-      params: filters
+    const response = await api.get('/trips', {
+      params: { role: 'driver', ...filters }
     });
     return response.data;
   } catch (error) {
@@ -58,11 +58,35 @@ export const getAvailableTrips = async (filters = {}) => {
 
 export const acceptTrip = async (tripId, tripData) => {
   try {
-    const response = await api.post(`/drivers/trips/${tripId}/accept`, tripData);
+    const response = await api.post(`/trips/${tripId}/accept`, tripData);
     return response.data;
   } catch (error) {
     console.error('❌ Accept trip error:', error);
     throw error.response?.data || { message: 'Không thể chấp nhận chuyến đi' };
+  }
+};
+
+// Derive basic driver stats from profile endpoint
+export const getDriverStats = async () => {
+  try {
+    const response = await api.get('/drivers/profile');
+    if (response.data?.success) {
+      const profile = response.data.data;
+      const rating = Number(profile?.rating?.asDriver?.average ?? profile?.rating?.average ?? profile?.rating ?? 0) || 0;
+      return {
+        success: true,
+        data: {
+          totalTrips: profile?.statistics?.totalTrips || 0,
+          completedTrips: profile?.statistics?.completedTrips || 0,
+          rating,
+          totalEarnings: 0,
+        },
+      };
+    }
+    return response.data;
+  } catch (error) {
+    console.error('❌ Get driver stats error:', error);
+    throw error.response?.data || { message: 'Không thể tải thống kê tài xế' };
   }
 };
 

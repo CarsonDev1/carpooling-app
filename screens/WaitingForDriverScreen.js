@@ -173,15 +173,15 @@ export default function WaitingForDriverScreen() {
         setHasError(false);
         setDebugInfo(`Loaded: ${tripDataFromApi.status}, ${currentRequestCount} requests`);
 
-        // Check if trip status changed to terminal states
-        if (['paid', 'completed', 'cancelled'].includes(tripDataFromApi.status)) {
+        // Check if trip status changed to next/terminal states
+        if (['confirmed', 'paid', 'completed', 'cancelled'].includes(tripDataFromApi.status)) {
           console.log('🛑 Trip in terminal state, stopping polling');
           setShouldStopPolling(true);
 
-          if (tripDataFromApi.status === 'paid') {
+          if (tripDataFromApi.status === 'paid' || tripDataFromApi.status === 'confirmed') {
             Alert.alert(
-              "💰 Đã thanh toán thành công!",
-              "Chuyến đi đã được xác nhận. Chuẩn bị sẵn sàng nhé!",
+              "✅ Đã có tài xế!",
+              "Chuyến đi đã được xác nhận, chuẩn bị khởi hành.",
               [
                 {
                   text: "Theo dõi chuyến đi",
@@ -192,12 +192,6 @@ export default function WaitingForDriverScreen() {
                   style: "cancel"
                 }
               ]
-            );
-          } else if (tripDataFromApi.status === 'confirmed') {
-            Alert.alert(
-              "✅ Tài xế đã được chọn!",
-              "Bạn đã chọn tài xế thành công. Hãy thanh toán để hoàn tất đặt xe.",
-              [{ text: "OK" }]
             );
           }
         }

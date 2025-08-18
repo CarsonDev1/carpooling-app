@@ -36,7 +36,7 @@ const DriverEarningsScreen = () => {
   const loadEarningsData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Load earnings summary
       const earningsResponse = await getDriverEarnings();
       if (earningsResponse.success) {
@@ -154,7 +154,7 @@ const DriverEarningsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4285F4" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -238,13 +238,13 @@ const DriverEarningsScreen = () => {
             <Text style={styles.statNumber}>{formatCurrency(earnings.today || 0)}</Text>
             <Text style={styles.statLabel}>Hôm nay</Text>
           </View>
-          
+
           <View style={styles.statCard}>
             <Ionicons name="calendar-outline" size={20} color="#4CAF50" />
             <Text style={styles.statNumber}>{formatCurrency(earnings.week || 0)}</Text>
             <Text style={styles.statLabel}>Tuần này</Text>
           </View>
-          
+
           <View style={styles.statCard}>
             <Ionicons name="calendar-outline" size={20} color="#FF9800" />
             <Text style={styles.statNumber}>{formatCurrency(earnings.month || 0)}</Text>
@@ -315,7 +315,7 @@ const DriverEarningsScreen = () => {
                     </View>
                   </View>
                 </View>
-                
+
                 <View style={styles.historyRight}>
                   <Text style={styles.historyAmount}>
                     {formatCurrency(item.earnings || 0)}
@@ -332,7 +332,7 @@ const DriverEarningsScreen = () => {
                     <View style={styles.historyRating}>
                       <Ionicons name="star" size={14} color="#FFD700" />
                       <Text style={styles.historyRatingText}>
-                        {item.rating.toFixed(1)}
+                        {Number(item?.rating || 0).toFixed(1)}
                       </Text>
                     </View>
                   )}

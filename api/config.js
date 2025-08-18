@@ -45,6 +45,11 @@ api.interceptors.request.use(
 			const token = await AsyncStorage.getItem('token');
 			if (token) {
 				config.headers.Authorization = `Bearer ${token}`;
+			} else {
+				// Ensure old Authorization header is removed when no token
+				if (config.headers && config.headers.Authorization) {
+					delete config.headers.Authorization;
+				}
 			}
 		} catch (error) {
 			console.error('Error getting token:', error);
@@ -79,6 +84,10 @@ api.interceptors.response.use(
 			console.log('🔒 Unauthorized - clearing auth data');
 			await AsyncStorage.removeItem('token');
 			await AsyncStorage.removeItem('user');
+			// Remove default Authorization header to avoid stale tokens
+			if (api?.defaults?.headers?.common?.Authorization) {
+				delete api.defaults.headers.common.Authorization;
+			}
 		}
 
 		// Network errors
