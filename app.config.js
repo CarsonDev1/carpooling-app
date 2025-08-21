@@ -1,16 +1,10 @@
-// Dynamic Expo config to inject Google Maps API key for Android (and iOS optionally)
+// Clean Expo config for Android build
 module.exports = ({ config }) => {
   return {
     ...config,
     plugins: [
       ...((config && config.plugins) || []),
-      [
-        '@rnmapbox/maps',
-        {
-          RNMapboxMapsDownloadToken:
-            'sk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWVoOXk0bGwwNXE1Mm1yNWg0dWhnZnUzIn0.Ovjrdod0bfZkQ84DT0mX-w',
-        },
-      ],
+      // Clean configuration without problematic plugins
     ],
     android: {
       ...(config.android || {}),

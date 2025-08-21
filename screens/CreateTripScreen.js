@@ -1,4 +1,4 @@
-// Custom Mapbox Geocoding implementation for React Native
+// Custom location search implementation for React Native
 // Simple input without any conflicts
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -28,9 +28,6 @@ import RouteInfo from '../components/RouteInfo';
 import VehicleTypeSelector from '../components/VehicleTypeSelector';
 
 const { width, height } = Dimensions.get('window');
-
-const MAPBOX_ACCESS_TOKEN =
-	'sk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWVoOXk0bGwwNXE1Mm1yNWg0dWhnZnUzIn0.Ovjrdod0bfZkQ84DT0mX-w';
 
 export default function CreateTripScreen() {
 	const navigation = useNavigation();
@@ -162,7 +159,7 @@ export default function CreateTripScreen() {
 			setSearching(true);
 			const response = await fetch(
 				`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-				`access_token=${MAPBOX_ACCESS_TOKEN}&` +
+				`access_token=sk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWVoOXk0bGwwNXE1Mm1yNWg0dWhnZnUzIn0.Ovjrdod0bfZkQ84DT0mX-w&` +
 				`country=VN&` +
 				`language=vi&` +
 				`limit=5&` +

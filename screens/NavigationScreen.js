@@ -18,9 +18,6 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-nativ
 
 const { width, height } = Dimensions.get('window');
 
-const MAPBOX_ACCESS_TOKEN =
-  'pk.eyJ1IjoiY2Fyc29uZGV2MSIsImEiOiJjbWRvb3ViNHQwMjQ4MmpxMHZ3Yng5b3gxIn0.kt2yx_c1j5JbxRF6SdzXyg';
-
 export default function NavigationScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -69,41 +66,22 @@ export default function NavigationScreen() {
     longitude: endCoordinates.lng,
   } : defaultEnd;
 
-  // Calculate route using Mapbox Directions API
+  // Calculate route using simple distance calculation
   const calculateRoute = async () => {
     if (hasCalculated) return; // Prevent multiple calls
 
     try {
       setLoading(true);
 
-      // Calculate route using Mapbox Directions API
-      const coordinates = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?access_token=${MAPBOX_ACCESS_TOKEN}&geometries=geojson&overview=full&steps=true&annotations=duration,distance&language=vi`;
+      // Simple route calculation without external API
+      const distanceKm = calculateDistance(origin, destination);
+      const estimatedTimeMinutes = Math.round(distanceKm * 2); // Rough estimate: 2 min per km
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        const duration = Math.round(route.duration / 60); // Convert to minutes
-        const distanceKm = (route.distance / 1000).toFixed(1); // Convert to km
-
-        // Convert GeoJSON coordinates to map coordinates
-        const coordinates = route.geometry.coordinates.map(coord => ({
-          latitude: coord[1],
-          longitude: coord[0],
-        }));
-
-        setRouteCoordinates(coordinates);
-        setEstimatedTime(duration);
-        setDistance(distanceKm);
-      } else {
-        // Fallback: create a simple straight line
-        setRouteCoordinates([origin, destination]);
-        const distanceKm = calculateDistance(origin, destination);
-        setDistance(distanceKm.toFixed(1));
-        setEstimatedTime(Math.round(distanceKm * 2));
-      }
+      // Create a simple route line
+      setRouteCoordinates([origin, destination]);
+      setDistance(distanceKm.toFixed(1));
+      setEstimatedTime(estimatedTimeMinutes);
+      setHasCalculated(true);
     } catch (error) {
       console.error('Error calculating route:', error);
       // Fallback: create a simple straight line
@@ -113,7 +91,6 @@ export default function NavigationScreen() {
       setEstimatedTime(Math.round(distanceKm * 2));
     } finally {
       setLoading(false);
-      setHasCalculated(true);
     }
   };
 
